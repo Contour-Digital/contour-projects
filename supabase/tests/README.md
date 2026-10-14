@@ -7,6 +7,7 @@ createdb contour_test
 psql -d contour_test -v ON_ERROR_STOP=1 \
   -f supabase/tests/supabase_stub.sql \
   -f supabase/migrations/0001_init.sql \
+  -f supabase/migrations/0002_harden_functions.sql \
   -f supabase/tests/automations_test.sql
 ```
 
