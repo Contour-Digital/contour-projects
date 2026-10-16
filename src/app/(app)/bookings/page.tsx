@@ -81,8 +81,8 @@ export default function BookingsPage() {
                 </div>
                 {b.message && <p className="mt-1.5 whitespace-pre-wrap text-slate-600">{b.message}</p>}
                 <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                  {b.meet_link && <a className="text-brand hover:underline" href={b.meet_link} target="_blank" rel="noreferrer">Google Meet link</a>}
-                  {b.client_id && <Link className="text-brand hover:underline" href={`/clients/${b.client_id}`}>Client record</Link>}
+                  {b.meet_link && <a className="text-brand-strong hover:underline" href={b.meet_link} target="_blank" rel="noreferrer">Google Meet link</a>}
+                  {b.client_id && <Link className="text-brand-strong hover:underline" href={`/clients/${b.client_id}`}>Client record</Link>}
                   {!b.google_event_id && b.status === "confirmed" && <span className="text-amber-700">Not on Google Calendar</span>}
                 </div>
               </div>

@@ -116,7 +116,7 @@ function View({ googleConfigured, siteUrl }: { googleConfigured: boolean; siteUr
       <section className="card p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">3. Meeting types</h2>
-          <Button size="sm" onClick={() => setEditingType({ duration_minutes: 30, location_type: "google_meet", active: true, color: "#0f766e" })}>
+          <Button size="sm" onClick={() => setEditingType({ duration_minutes: 30, location_type: "google_meet", active: true, color: "#0098ff" })}>
             ＋ Add meeting type
           </Button>
         </div>
@@ -131,7 +131,7 @@ function View({ googleConfigured, siteUrl }: { googleConfigured: boolean; siteUr
                     {t.name} <span className="font-normal text-slate-500">· {t.duration_minutes} min</span>
                     {!t.active && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">Hidden</span>}
                   </div>
-                  <a className="truncate text-xs text-brand hover:underline" href={link} target="_blank" rel="noreferrer">{link}</a>
+                  <a className="truncate text-xs text-brand-strong hover:underline" href={link} target="_blank" rel="noreferrer">{link}</a>
                 </div>
                 <CopyButton text={link} label="Copy link" />
                 <Button size="sm" variant="secondary" onClick={() => setEditingType(t)}>Edit</Button>
@@ -280,7 +280,7 @@ function AvailabilityForm({ settings, onSaved }: { settings: BookingSettings; on
               {on && (
                 <button
                   type="button"
-                  className="text-xs text-brand hover:underline"
+                  className="text-xs text-brand-strong hover:underline"
                   onClick={() => setDay(key, [...ranges, { start: "13:00", end: "17:00" }])}
                 >
                   + split hours
@@ -337,7 +337,7 @@ function EventTypeModal({ initial, onClose, onSaved }: { initial: Partial<EventT
       duration_minutes: Number(form.duration_minutes) || 30,
       location_type: form.location_type ?? "google_meet",
       location_detail: form.location_detail?.trim() || null,
-      color: form.color ?? "#0f766e",
+      color: form.color ?? "#0098ff",
       active: form.active ?? true,
     };
     const { error } = form.id
@@ -361,7 +361,7 @@ function EventTypeModal({ initial, onClose, onSaved }: { initial: Partial<EventT
             <input className="input" type="number" min="5" max="480" step="5" value={form.duration_minutes ?? 30} onChange={(e) => setForm({ ...form, duration_minutes: Number(e.target.value) })} />
           </Field>
           <Field label="Colour">
-            <input className="input h-[38px] p-1" type="color" value={form.color ?? "#0f766e"} onChange={(e) => setForm({ ...form, color: e.target.value })} />
+            <input className="input h-[38px] p-1" type="color" value={form.color ?? "#0098ff"} onChange={(e) => setForm({ ...form, color: e.target.value })} />
           </Field>
         </div>
         <Field label="Where">

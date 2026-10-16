@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { createClient } from "@/lib/supabase/client";
+import { Logo } from "@/components/brand/Logo";
 
 const NAV = [
   { href: "/board", label: "Board", icon: "▦" },
@@ -31,10 +32,10 @@ export function Sidebar({ email }: { email: string }) {
     <>
       {/* Desktop */}
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-slate-200 bg-white md:flex">
-        <div className="px-5 py-5">
-          <div className="text-xs font-semibold uppercase tracking-widest text-brand">Contour Digital</div>
-          <div className="text-sm text-slate-500">Projects</div>
-        </div>
+        <Link href="/board" className="block px-5 pb-5 pt-6">
+          <Logo className="h-[30px]" />
+          <div className="mt-2 text-xs font-medium uppercase tracking-widest text-slate-400">Projects</div>
+        </Link>
         <nav className="flex-1 space-y-0.5 px-3">
           {NAV.map((item) => (
             <Link
@@ -42,7 +43,7 @@ export function Sidebar({ email }: { email: string }) {
               href={item.href}
               className={clsx(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm",
-                isActive(item.href) ? "bg-brand-soft/60 font-medium text-brand-strong" : "text-slate-600 hover:bg-slate-100"
+                isActive(item.href) ? "bg-brand-soft font-medium text-brand-navy shadow-[inset_3px_0_0_theme(colors.brand.DEFAULT)]" : "text-slate-600 hover:bg-slate-100"
               )}
             >
               <span className="w-4 text-center opacity-70">{item.icon}</span>
@@ -57,12 +58,18 @@ export function Sidebar({ email }: { email: string }) {
       </aside>
 
       {/* Mobile */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+        <Link href="/board" aria-label="Board">
+          <Logo className="h-6" />
+        </Link>
+        <span className="text-[11px] font-medium uppercase tracking-widest text-slate-400">Projects</span>
+      </header>
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-slate-200 bg-white md:hidden">
         {NAV.slice(0, 4).map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className={clsx("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]", isActive(item.href) ? "text-brand" : "text-slate-500")}
+            className={clsx("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]", isActive(item.href) ? "text-brand-strong" : "text-slate-500")}
           >
             <span className="text-base">{item.icon}</span>
             {item.label}
@@ -70,7 +77,7 @@ export function Sidebar({ email }: { email: string }) {
         ))}
         <Link
           href="/settings/stages"
-          className={clsx("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]", pathname.startsWith("/settings") ? "text-brand" : "text-slate-500")}
+          className={clsx("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]", pathname.startsWith("/settings") ? "text-brand-strong" : "text-slate-500")}
         >
           <span className="text-base">⚙</span>
           Settings

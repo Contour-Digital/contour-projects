@@ -315,7 +315,7 @@ function Confirmed({ confirmation, tz, eventName }: { confirmation: Confirmation
       </p>
       <p className="mt-1 text-sm text-slate-500">A calendar invite is on its way to your inbox.</p>
       {confirmation.meetLink && (
-        <a href={confirmation.meetLink} target="_blank" rel="noreferrer" className="mt-4 inline-block text-sm font-medium text-brand hover:underline">
+        <a href={confirmation.meetLink} target="_blank" rel="noreferrer" className="mt-4 inline-block text-sm font-medium text-brand-strong hover:underline">
           Google Meet link
         </a>
       )}

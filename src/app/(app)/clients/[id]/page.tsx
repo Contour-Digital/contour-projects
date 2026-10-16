@@ -93,7 +93,7 @@ export default function ClientPage() {
             <ul className="divide-y divide-slate-100">
               {data.projects.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/projects/${p.id}`} className="flex items-center justify-between gap-3 py-2.5 hover:text-brand">
+                  <Link href={`/projects/${p.id}`} className="flex items-center justify-between gap-3 py-2.5 hover:text-brand-strong">
                     <span className="font-medium">
                       {p.name}
                       {p.archived && <span className="ml-2 text-xs text-slate-400">archived</span>}

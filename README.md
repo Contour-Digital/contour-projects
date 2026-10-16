@@ -15,7 +15,7 @@ Next.js (App Router) + TypeScript + Tailwind on the front end, Supabase (Postgre
 ### 1. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com) (Sydney region is closest).
-2. **SQL Editor** → paste and run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql). It creates every table, the security rules, the automations and starter stages/checklists you can edit later.
+2. **SQL Editor** → paste and run each file in [`supabase/migrations`](supabase/migrations) in order, starting with `0001_init.sql`. It creates every table, the security rules, the automations and starter stages/checklists you can edit later.
 3. Add yourself to the team (only listed emails can see any data):
    ```sql
    insert into team_members (email) values ('you@contourdigital.com.au');
