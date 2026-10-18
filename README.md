@@ -14,6 +14,8 @@ Next.js (App Router) + TypeScript + Tailwind on the front end, Supabase (Postgre
 
 ### 1. Supabase
 
+Create the project in the **Sydney (ap-southeast-2)** region so client data stays in Australia. A Supabase project's region can't be changed later.
+
 1. Create a project at [supabase.com](https://supabase.com) (Sydney region is closest).
 2. **SQL Editor** → paste and run each file in [`supabase/migrations`](supabase/migrations) in order, starting with `0001_init.sql`. It creates every table, the security rules, the automations and starter stages/checklists you can edit later.
 3. Add yourself to the team (only listed emails can see any data):
@@ -43,7 +45,8 @@ Next.js (App Router) + TypeScript + Tailwind on the front end, Supabase (Postgre
    | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key (server only) |
    | `NEXT_PUBLIC_SITE_URL` | e.g. `https://projects.contourdigital.com.au` |
    | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | from step 2 |
-3. Deploy, and optionally add a custom domain (update `NEXT_PUBLIC_SITE_URL` and the Google redirect URI to match).
+3. Server code runs in Vercel's Sydney region (`syd1`), set in [`vercel.json`](vercel.json).
+4. Deploy, and optionally add a custom domain (update `NEXT_PUBLIC_SITE_URL` and the Google redirect URI to match).
 
 ### 4. Connect and embed
 
