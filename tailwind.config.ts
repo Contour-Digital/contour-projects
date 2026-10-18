@@ -5,7 +5,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        brand: { DEFAULT: "#0f766e", strong: "#115e59", soft: "#ccfbf1" },
+        // From the Contour Digital logo: blue #0098ff and navy #08245b.
+        // `strong` is a darker blue for text and hovers, since the logo blue is too light for small text on white.
+        brand: { DEFAULT: "#0098ff", strong: "#0070c0", soft: "#e0f1ff", navy: "#08245b", "navy-strong": "#051940" },
       },
     },
   },

@@ -8,13 +8,13 @@ export function ClientCard({ client, showLink = true }: { client: Client; showLi
       <div className="font-medium">{client.company || client.name}</div>
       {client.company && <div className="text-slate-600">{client.name}</div>}
       {client.email && (
-        <a href={`mailto:${client.email}`} className="block truncate text-brand hover:underline">{client.email}</a>
+        <a href={`mailto:${client.email}`} className="block truncate text-brand-strong hover:underline">{client.email}</a>
       )}
       {client.phone && (
-        <a href={`tel:${client.phone.replace(/\s/g, "")}`} className="block text-brand hover:underline">{client.phone}</a>
+        <a href={`tel:${client.phone.replace(/\s/g, "")}`} className="block text-brand-strong hover:underline">{client.phone}</a>
       )}
       {website && (
-        <a href={website} target="_blank" rel="noreferrer" className="block truncate text-brand hover:underline">{client.website}</a>
+        <a href={website} target="_blank" rel="noreferrer" className="block truncate text-brand-strong hover:underline">{client.website}</a>
       )}
       {client.address && <div className="whitespace-pre-wrap text-slate-600">{client.address}</div>}
       {client.abn && <div className="text-slate-500">ABN {client.abn}</div>}

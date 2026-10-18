@@ -242,7 +242,7 @@ export default function ProjectPage() {
           <section className="card p-5">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold">Details</h2>
-              <button className="text-sm text-brand hover:underline" onClick={() => setEditing(!editing)}>
+              <button className="text-sm text-brand-strong hover:underline" onClick={() => setEditing(!editing)}>
                 {editing ? "Cancel" : "Edit"}
               </button>
             </div>

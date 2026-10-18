@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { Logo } from "@/components/brand/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,8 +29,8 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center p-4">
       <form onSubmit={signIn} className="card w-full max-w-sm space-y-4 p-6">
         <div>
-          <div className="text-sm font-semibold uppercase tracking-widest text-brand">Contour Digital</div>
-          <h1 className="mt-1 text-xl font-semibold">Sign in</h1>
+          <Logo className="h-8" />
+          <h1 className="mt-6 text-xl font-semibold text-brand-navy">Sign in</h1>
         </div>
         <Field label="Email">
           <input className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
