@@ -6,6 +6,7 @@ import { computeSlots, isValidTimezone } from "@/lib/booking/availability";
 import { busyBetween, loadEventType, loadSettings } from "@/lib/booking/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createEvent } from "@/lib/google";
+import { sendConfirmation } from "@/lib/booking/sendConfirmation";
 
 type Body = {
   slug?: string;
@@ -60,6 +61,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Sorry, that time was just taken. Please pick another." }, { status: 409 });
   }
 
+  const location =
+    eventType.location_type === "phone"
+      ? `Phone call: ${settings.owner_name} will call ${phone}`
+      : eventType.location_detail ?? undefined;
+
   const admin = createAdminClient();
 
   // Link the booking to an existing client with this email, or create one.
@@ -89,6 +95,7 @@ export async function POST(request: NextRequest) {
       start_at: start.toISOString(),
       end_at: end.toISOString(),
       timezone: tz,
+      location: location ?? null,
     })
     .select("id")
     .single();
@@ -101,10 +108,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const location =
-    eventType.location_type === "phone"
-      ? `Phone call: ${settings.owner_name} will call ${phone}`
-      : eventType.location_detail ?? undefined;
   const description = [
     `Booked online by ${name} (${email}).`,
     company && `Company: ${company}`,
@@ -129,11 +132,23 @@ export async function POST(request: NextRequest) {
     });
     if (event) {
       meetLink = event.meetLink;
-      await admin.from("bookings").update({ google_event_id: event.id, meet_link: meetLink }).eq("id", booking.id);
+      await admin
+        .from("bookings")
+        .update({ google_event_id: event.id, meet_link: meetLink, ical_uid: event.icalUid, invite_sent: true })
+        .eq("id", booking.id);
     }
   } catch (err) {
     // The booking is saved and shows in the dashboard even if Google is down.
     console.error("Google event creation failed", err);
+  }
+
+  if (settings.confirmation_enabled) {
+    try {
+      await sendConfirmation(booking.id);
+    } catch (err) {
+      // Not fatal: the Google invite has the details, and it can be resent from Meetings.
+      console.error("Confirmation email failed", err);
+    }
   }
 
   return NextResponse.json({ ok: true, start: start.toISOString(), end: end.toISOString(), meetLink, location });

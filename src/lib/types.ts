@@ -104,6 +104,9 @@ export type BookingSettings = {
   max_days_ahead: number;
   buffer_minutes: number;
   slot_interval_minutes: number;
+  confirmation_enabled: boolean;
+  confirmation_subject: string;
+  confirmation_body: string;
 };
 
 export type LocationType = "google_meet" | "phone" | "in_person" | "custom";
@@ -126,9 +129,10 @@ export type Booking = {
   event_type_id: string | null;
   client_id: string | null;
   name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   company: string | null;
+  /** Details from the booker, or the agenda for an ad hoc meeting. */
   message: string | null;
   start_at: string;
   end_at: string;
@@ -136,6 +140,15 @@ export type Booking = {
   status: "confirmed" | "cancelled";
   google_event_id: string | null;
   meet_link: string | null;
+  /** "public": booked on the booking page. "ad_hoc": added in Meetings, any time. */
+  source: "public" | "ad_hoc";
+  /** One-off title when an ad hoc meeting isn't one of the meeting types. */
+  title: string | null;
+  location: string | null;
+  invite_sent: boolean;
+  confirmation_sent_at: string | null;
+  ical_uid: string | null;
+  calendar_token: string;
   created_at: string;
 };
 
