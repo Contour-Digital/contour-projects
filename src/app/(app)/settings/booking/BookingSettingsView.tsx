@@ -165,7 +165,7 @@ function View({ googleConfigured, siteUrl }: { googleConfigured: boolean; siteUr
         </p>
       </section>
 
-      <ConfirmationEmailForm settings={data.settings} canSend={Boolean(data.google?.can_send_email)} onSaved={reload} />
+      <ConfirmationEmailForm settings={data.settings} canSend={Boolean(data.google?.can_send_email)} connectedEmail={data.google?.email} onSaved={reload} />
 
       {editingType && (
         <EventTypeModal
@@ -220,7 +220,7 @@ function AvailabilityForm({ settings, onSaved }: { settings: BookingSettings; on
     }
     setSaving(true);
     // The confirmation email has its own form; don't overwrite it with a stale copy.
-    const { id: _id, confirmation_enabled: _e, confirmation_subject: _s, confirmation_body: _b, ...patch } = form;
+    const { id: _id, confirmation_enabled: _e, confirmation_subject: _s, confirmation_body: _b, confirmation_from_email: _f, confirmation_from_name: _n, ...patch } = form;
     const { error } = await createClient().from("booking_settings").update(patch).eq("id", 1);
     setSaving(false);
     if (error) return alert(error.message);

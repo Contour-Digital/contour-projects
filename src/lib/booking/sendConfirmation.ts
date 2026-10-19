@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { gmailSender, sendGmail, siteUrl } from "@/lib/google";
 import type { Booking, BookingSettings, EventType } from "@/lib/types";
-import { buildIcs, buildMime, calendarLinks, emailHtml, emailText, meetingInfo, meetingVars, renderTemplate, type MeetingInfo } from "./confirmation";
+import { EMAIL_LOGO_PATH, buildIcs, buildMime, calendarLinks, emailHtml, emailText, meetingInfo, meetingVars, renderTemplate, type MeetingInfo } from "./confirmation";
 
 export const NOT_ALLOWED =
   "The app isn't allowed to send email yet. Reconnect Google in Settings, Booking page, and tick the Gmail permission.";
@@ -41,11 +41,11 @@ export async function sendConfirmation(bookingId: string, override?: { subject?:
 
   await sendGmail(
     buildMime({
-      from: { name: s.owner_name, email: sender },
+      from: { name: s.confirmation_from_name || s.owner_name, email: s.confirmation_from_email || sender },
       to: { name: b.name, email: b.email },
       subject,
       text: emailText(body, links),
-      html: emailHtml(body, links),
+      html: emailHtml(body, links, `${siteUrl()}${EMAIL_LOGO_PATH}`),
       ics: icsFor(b, info, sender),
     })
   );

@@ -53,6 +53,14 @@ describe("confirmation emails", () => {
     expect(emailHtml("<b>Hi</b> & welcome", links)).toContain("&lt;b&gt;Hi&lt;/b&gt; &amp; welcome");
   });
 
+  it("adds the logo at the bottom when given", () => {
+    const links = calendarLinks(meeting, "https://x/t.ics");
+    const html = emailHtml("Hi", links, "https://app.example/brand/logo.png");
+    expect(html).toContain('<img src="https://app.example/brand/logo.png" alt="Contour Digital" width="150"');
+    expect(html.indexOf("<img")).toBeGreaterThan(html.indexOf("Apple Calendar"));
+    expect(emailHtml("Hi", links)).not.toContain("<img");
+  });
+
   it("encodes non-ASCII subjects and attaches the invite", () => {
     const mime = buildMime({
       from: { name: "Nick", email: "nick@example.com" },

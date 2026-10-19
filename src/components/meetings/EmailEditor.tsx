@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { PLACEHOLDERS, renderTemplate } from "@/lib/booking/confirmation";
+import { EMAIL_LOGO_PATH, PLACEHOLDERS, renderTemplate } from "@/lib/booking/confirmation";
 import { Field } from "@/components/ui/Field";
 
 /** Subject and body with {{placeholder}} buttons and a live preview. */
@@ -80,6 +80,8 @@ export function EmailEditor({
             <span key={l} className="rounded-md border border-slate-300 bg-white px-2 py-1">{l}</span>
           ))}
         </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={EMAIL_LOGO_PATH} alt="Contour Digital" width={150} height={24} className="mt-5 border-t border-slate-200 pt-3" style={{ width: 150, height: "auto", boxSizing: "content-box" }} />
         <p className="mt-2 text-xs text-slate-500">An .ics calendar file is attached too. Sent from your connected Google account.</p>
       </div>
     </div>
