@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/Button";
 import { StageBadge } from "@/components/ui/StageBadge";
 import { ClientCard } from "@/components/clients/ClientCard";
 import { ClientForm } from "@/components/clients/ClientForm";
+import { OffboardModal } from "@/components/clients/OffboardModal";
+import { saveClient } from "@/components/clients/saveClient";
 import { NewProjectModal } from "@/components/projects/NewProjectModal";
 
 async function load(id: string) {
@@ -38,6 +40,7 @@ export default function ClientPage() {
   const { data, reload, error, loading } = useData(() => load(id), [id]);
   const [editing, setEditing] = useState(false);
   const [newProject, setNewProject] = useState(false);
+  const [offboarding, setOffboarding] = useState(false);
 
   if (error) return <p className="text-red-600">{error}</p>;
   if (loading || !data) return <p className="text-slate-500">Loading…</p>;
@@ -61,16 +64,42 @@ export default function ClientPage() {
             <ClientForm
               initial={client}
               onCancel={() => setEditing(false)}
-              onSubmit={async (values) => {
-                const { error } = await createClient().from("clients").update(values).eq("id", id);
-                if (error) return error.message;
+              onSubmit={async (values, login) => {
+                const hadLogin = Boolean(client.domain_login_updated_at);
+                if (hadLogin && values.domain_location !== "external" && !confirm("The domain isn't external any more, so the saved domain login will be deleted. Continue?")) {
+                  return null;
+                }
+                const res = await saveClient(id, values, login, hadLogin);
+                if ("error" in res) {
+                  reload();
+                  return res.error;
+                }
                 setEditing(false);
                 reload();
                 return null;
               }}
             />
           ) : (
-            <ClientCard client={client} showLink={false} />
+            <ClientCard client={client} showLink={false} onLoginRemoved={reload} />
+          )}
+          {!editing && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {client.offboarded_at ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={async () => {
+                    const { error } = await createClient().rpc("restore_client", { p_client_id: id });
+                    if (error) return alert(error.message);
+                    reload();
+                  }}
+                >
+                  Restore as current client
+                </Button>
+              ) : (
+                <Button size="sm" variant="secondary" onClick={() => setOffboarding(true)}>Offboard client</Button>
+              )}
+            </div>
           )}
           {!editing && (
             <button
@@ -124,6 +153,18 @@ export default function ClientPage() {
           </section>
         </div>
       </div>
+
+      {offboarding && (
+        <OffboardModal
+          client={client}
+          activeProjects={data.projects.filter((p) => !p.archived).length}
+          onClose={() => setOffboarding(false)}
+          onDone={() => {
+            setOffboarding(false);
+            reload();
+          }}
+        />
+      )}
 
       {newProject && (
         <NewProjectModal
