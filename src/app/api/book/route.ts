@@ -7,6 +7,7 @@ import { busyBetween, loadEventType, loadSettings } from "@/lib/booking/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createEvent } from "@/lib/google";
 import { describeLocation, offeredLocations } from "@/lib/booking/locations";
+import { checkAnswers, formatAnswers } from "@/lib/booking/questions";
 import type { LocationType } from "@/lib/types";
 import { sendConfirmation } from "@/lib/booking/sendConfirmation";
 
@@ -20,6 +21,7 @@ type Body = {
   company?: string;
   message?: string;
   location?: string;
+  answers?: Record<string, string | string[]>;
   website?: string; // honeypot: real people never fill this in
 };
 
@@ -56,6 +58,9 @@ export async function POST(request: NextRequest) {
   if (locationType === "phone" && !phone) {
     return NextResponse.json({ error: "Please add a phone number so we can call you." }, { status: 400 });
   }
+  const checked = checkAnswers(eventType.questions ?? [], body.answers);
+  if ("error" in checked) return NextResponse.json({ error: checked.error }, { status: 400 });
+  const { answers } = checked;
 
   const settings = await loadSettings();
   const end = new Date(start.getTime() + eventType.duration_minutes * 60_000);
@@ -106,6 +111,7 @@ export async function POST(request: NextRequest) {
       timezone: tz,
       location_type: locationType,
       location: locationText,
+      answers,
     })
     .select("id")
     .single();
@@ -125,6 +131,7 @@ export async function POST(request: NextRequest) {
     company && `Company: ${company}`,
     phone && `Phone: ${phone}`,
     message && `\n${message}`,
+    answers.length && `\n${formatAnswers(answers)}`,
   ]
     .filter(Boolean)
     .join("\n");

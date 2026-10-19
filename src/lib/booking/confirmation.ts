@@ -1,5 +1,6 @@
 import { formatInTimeZone } from "date-fns-tz";
 import type { Booking, BookingSettings, EventType } from "@/lib/types";
+import { formatAnswers, type Answer } from "@/lib/booking/questions";
 
 // Confirmation emails: template placeholders, "Add to calendar" links, the
 // .ics file and the raw MIME message. Pure, so the dashboard can preview it.
@@ -17,6 +18,7 @@ export const PLACEHOLDERS: { key: string; label: string }[] = [
   { key: "location", label: "Meet link, phone or address" },
   { key: "meeting_link", label: "Google Meet link (if any)" },
   { key: "details", label: "Details or agenda" },
+  { key: "answers", label: "Their answers to your questions" },
   { key: "owner_name", label: "Your name" },
 ];
 
@@ -30,6 +32,7 @@ export type MeetingInfo = {
   location?: string | null;
   meetLink?: string | null;
   details?: string | null;
+  answers?: Answer[] | null;
   ownerName: string;
 };
 
@@ -45,6 +48,7 @@ export function meetingInfo(booking: Booking, type: EventType | null, settings: 
     location: booking.meet_link ? `Google Meet: ${booking.meet_link}` : booking.location,
     meetLink: booking.meet_link,
     details: booking.message,
+    answers: booking.answers,
     ownerName: settings.owner_name,
   };
 }
@@ -81,6 +85,7 @@ export function meetingVars(m: MeetingInfo): Record<string, string> {
     location: m.location || "To be confirmed",
     meeting_link: m.meetLink ?? "",
     details: m.details ?? "",
+    answers: formatAnswers(m.answers),
     owner_name: m.ownerName,
   };
 }

@@ -9,6 +9,7 @@ export function toPublic(t: EventType): PublicEventType {
     name: t.name,
     description: t.description,
     duration_minutes: t.duration_minutes,
+    questions: t.questions ?? [],
     locations: offeredLocations(t).map((type) => ({ type, detail: locationDetail(t, type) })),
     color: t.color,
   };

@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, parseISO, startOfMonth, startOfWeek } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { LOCATION_LABEL } from "@/lib/booking/locations";
+import type { Question } from "@/lib/booking/questions";
 import type { LocationType } from "@/lib/types";
 
 export type PublicEventType = {
@@ -14,6 +15,8 @@ export type PublicEventType = {
   duration_minutes: number;
   /** Where the meeting can happen; the booker picks one when there's more than one. */
   locations: { type: LocationType; detail: string | null }[];
+  /** Pre-meeting questions set on the meeting type. */
+  questions: Question[];
   color: string;
 };
 
@@ -250,6 +253,7 @@ function DetailsForm({
     website: "",
     location: choices.length === 1 ? choices[0].type : "",
   });
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const needsPhone = form.location === "phone";
@@ -257,12 +261,15 @@ function DetailsForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.location) return setError("Please choose where you'd like to meet.");
+    // The browser checks required text answers; tickboxes need checking here.
+    const missing = eventType.questions.find((q) => q.required && q.type === "checkboxes" && !(answers[q.id] as string[] | undefined)?.length);
+    if (missing) return setError(`Please answer "${missing.label}".`);
     setBusy(true);
     setError(null);
     const res = await fetch("/api/book", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, slug: eventType.slug, start: slot, tz }),
+      body: JSON.stringify({ ...form, answers, slug: eventType.slug, start: slot, tz }),
     });
     const json = await res.json().catch(() => ({}));
     setBusy(false);
@@ -329,6 +336,15 @@ function DetailsForm({
         <span className="label">Anything we should know?</span>
         <textarea className="input min-h-[90px]" value={form.message} onChange={set("message")} placeholder="Tell us a little about your project" />
       </label>
+      {eventType.questions.map((q) => (
+        <QuestionField
+          key={q.id}
+          question={q}
+          color={eventType.color}
+          value={answers[q.id]}
+          onChange={(v) => setAnswers({ ...answers, [q.id]: v })}
+        />
+      ))}
       {/* Honeypot for bots; hidden from people and screen readers. */}
       <input className="hidden" tabIndex={-1} autoComplete="off" aria-hidden="true" value={form.website} onChange={set("website")} />
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -340,6 +356,65 @@ function DetailsForm({
         {busy ? "Booking…" : `Book ${formatInTimeZone(parseISO(slot), tz, "EEE d MMM, h:mm a")}`}
       </button>
     </form>
+  );
+}
+
+function QuestionField({
+  question: q,
+  color,
+  value,
+  onChange,
+}: {
+  question: Question;
+  color: string;
+  value: string | string[] | undefined;
+  onChange: (v: string | string[]) => void;
+}) {
+  const label = `${q.label}${q.required ? " *" : ""}`;
+  if (q.type === "short_text" || q.type === "paragraph") {
+    const text = typeof value === "string" ? value : "";
+    return (
+      <label className="block">
+        <span className="label">{label}</span>
+        {q.type === "paragraph" ? (
+          <textarea className="input min-h-[90px]" required={q.required} value={text} onChange={(e) => onChange(e.target.value)} />
+        ) : (
+          <input className="input" required={q.required} value={text} onChange={(e) => onChange(e.target.value)} />
+        )}
+      </label>
+    );
+  }
+  const picked = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+  return (
+    <fieldset>
+      <legend className="label">{label}</legend>
+      <div className="mt-1 space-y-1.5">
+        {q.options.map((o, i) => (
+          <label key={o} className="flex items-start gap-2 text-sm text-slate-700">
+            {q.type === "checkboxes" ? (
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                style={{ accentColor: color }}
+                checked={picked.includes(o)}
+                onChange={(e) => onChange(e.target.checked ? q.options.filter((x) => x === o || picked.includes(x)) : picked.filter((x) => x !== o))}
+              />
+            ) : (
+              <input
+                type="radio"
+                name={`q-${q.id}`}
+                className="mt-0.5"
+                style={{ accentColor: color }}
+                required={q.required && i === 0}
+                checked={picked.includes(o)}
+                onChange={() => onChange(o)}
+              />
+            )}
+            <span>{o}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

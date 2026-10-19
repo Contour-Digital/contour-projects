@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
 import type { Booking, BookingSettings, Client, EventType } from "@/lib/types";
 import { LOCATION_LABEL } from "@/lib/booking/locations";
+import { answerText } from "@/lib/booking/questions";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AdHocMeetingModal } from "@/components/meetings/AdHocMeetingModal";
@@ -112,6 +113,16 @@ export default function MeetingsPage() {
                   <div className="text-slate-500">◎ {b.location ?? LOCATION_LABEL[b.location_type!]}</div>
                 )}
                 {b.message && <p className="mt-1.5 whitespace-pre-wrap text-slate-600">{b.message}</p>}
+                {b.answers?.length > 0 && (
+                  <dl className="mt-2 space-y-1 rounded-lg bg-slate-50 p-2.5">
+                    {b.answers.map((a, i) => (
+                      <div key={i}>
+                        <dt className="text-xs font-medium text-slate-500">{a.question}</dt>
+                        <dd className="whitespace-pre-wrap text-slate-700">{answerText(a)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
                 <div className="mt-2 flex flex-wrap gap-3 text-xs">
                   {b.meet_link && <a className="text-brand-strong hover:underline" href={b.meet_link} target="_blank" rel="noreferrer">Google Meet link</a>}
                   {b.client_id && <Link className="text-brand-strong hover:underline" href={`/clients/${b.client_id}`}>Client record</Link>}
