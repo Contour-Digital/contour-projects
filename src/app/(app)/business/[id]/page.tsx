@@ -44,7 +44,8 @@ export default function AdminTaskPage() {
   const { task, subtasks, recipients, clients } = data;
   const supabase = createClient();
   const listed = new Set(recipients.map((r) => r.client_id));
-  const unlisted = clients.filter((c) => !listed.has(c.id));
+  // Offboarded clients aren't offered, but stay on lists they were already on.
+  const unlisted = clients.filter((c) => !listed.has(c.id) && !c.offboarded_at);
 
   async function updateTask(patch: Partial<AdminTask>) {
     setData({ ...data!, task: { ...task, ...patch } });
