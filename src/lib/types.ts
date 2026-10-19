@@ -114,8 +114,12 @@ export type EventType = {
   name: string;
   description: string | null;
   duration_minutes: number;
+  /** First offered location; kept for older code. */
   location_type: LocationType;
   location_detail: string | null;
+  /** Every location the booker can choose from. */
+  location_types: LocationType[];
+  location_details: Partial<Record<LocationType, string>>;
   color: string;
   active: boolean;
   position: number;
@@ -136,6 +140,9 @@ export type Booking = {
   status: "confirmed" | "cancelled";
   google_event_id: string | null;
   meet_link: string | null;
+  /** The location the booker chose, and the text shown for it. */
+  location_type: LocationType | null;
+  location: string | null;
   created_at: string;
 };
 

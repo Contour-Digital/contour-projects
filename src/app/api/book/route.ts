@@ -6,6 +6,8 @@ import { computeSlots, isValidTimezone } from "@/lib/booking/availability";
 import { busyBetween, loadEventType, loadSettings } from "@/lib/booking/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createEvent } from "@/lib/google";
+import { describeLocation, offeredLocations } from "@/lib/booking/locations";
+import type { LocationType } from "@/lib/types";
 
 type Body = {
   slug?: string;
@@ -16,6 +18,7 @@ type Body = {
   phone?: string;
   company?: string;
   message?: string;
+  location?: string;
   website?: string; // honeypot: real people never fill this in
 };
 
@@ -45,7 +48,11 @@ export async function POST(request: NextRequest) {
 
   const eventType = await loadEventType(clean(body.slug, 80));
   if (!eventType) return NextResponse.json({ error: "This booking link no longer exists." }, { status: 404 });
-  if (eventType.location_type === "phone" && !phone) {
+  const offered = offeredLocations(eventType);
+  // Only one option means nothing to choose; otherwise the booker must pick one we offer.
+  const locationType = offered.length === 1 ? offered[0] : (offered.find((l) => l === body.location) as LocationType | undefined);
+  if (!locationType) return NextResponse.json({ error: "Please choose where you'd like to meet." }, { status: 400 });
+  if (locationType === "phone" && !phone) {
     return NextResponse.json({ error: "Please add a phone number so we can call you." }, { status: 400 });
   }
 
@@ -59,6 +66,13 @@ export async function POST(request: NextRequest) {
   if (!open[day]?.includes(start.toISOString())) {
     return NextResponse.json({ error: "Sorry, that time was just taken. Please pick another." }, { status: 409 });
   }
+
+  const locationText =
+    locationType === "phone"
+      ? `Phone call: ${settings.owner_name} will call ${phone}`
+      : locationType === "google_meet"
+        ? null
+        : describeLocation(eventType, locationType);
 
   const admin = createAdminClient();
 
@@ -89,6 +103,8 @@ export async function POST(request: NextRequest) {
       start_at: start.toISOString(),
       end_at: end.toISOString(),
       timezone: tz,
+      location_type: locationType,
+      location: locationText,
     })
     .select("id")
     .single();
@@ -101,12 +117,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const location =
-    eventType.location_type === "phone"
-      ? `Phone call: ${settings.owner_name} will call ${phone}`
-      : eventType.location_detail ?? undefined;
+  const location = locationText ?? undefined;
   const description = [
     `Booked online by ${name} (${email}).`,
+    `Where: ${locationText ?? "Google Meet"}`,
     company && `Company: ${company}`,
     phone && `Phone: ${phone}`,
     message && `\n${message}`,
@@ -124,7 +138,7 @@ export async function POST(request: NextRequest) {
       timezone: settings.timezone,
       attendee: { email, name },
       location,
-      addMeet: eventType.location_type === "google_meet",
+      addMeet: locationType === "google_meet",
       requestId: randomUUID(),
     });
     if (event) {

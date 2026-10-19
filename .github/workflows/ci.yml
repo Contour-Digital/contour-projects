@@ -50,7 +50,10 @@ jobs:
             -f supabase/migrations/0002_harden_functions.sql \
             -f supabase/migrations/0003_brand_colour.sql \
             -f supabase/migrations/0004_client_details.sql \
+            -f supabase/migrations/0008_meeting_location_choice.sql \
             -f supabase/tests/automations_test.sql \
-            -f supabase/tests/client_details_test.sql | tee out.txt
+            -f supabase/tests/client_details_test.sql \
+            -f supabase/tests/meeting_locations_test.sql | tee out.txt
           grep -q "ALL AUTOMATION/RLS TESTS PASSED" out.txt
           grep -q "ALL CLIENT DETAILS TESTS PASSED" out.txt
+          grep -q "ALL MEETING LOCATION TESTS PASSED" out.txt

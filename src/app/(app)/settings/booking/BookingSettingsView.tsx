@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
+import { LOCATION_TYPES, locationDetail, offeredLocations } from "@/lib/booking/locations";
 
 const DAYS: { key: keyof WeeklyHours; label: string }[] = [
   { key: "1", label: "Monday" },
@@ -116,7 +117,7 @@ function View({ googleConfigured, siteUrl }: { googleConfigured: boolean; siteUr
       <section className="card p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">3. Meeting types</h2>
-          <Button size="sm" onClick={() => setEditingType({ duration_minutes: 30, location_type: "google_meet", active: true, color: "#0098ff" })}>
+          <Button size="sm" onClick={() => setEditingType({ duration_minutes: 30, location_type: "google_meet", location_types: ["google_meet"], active: true, color: "#0098ff" })}>
             ＋ Add meeting type
           </Button>
         </div>
@@ -128,7 +129,7 @@ function View({ googleConfigured, siteUrl }: { googleConfigured: boolean; siteUr
                 <span className="h-3 w-3 rounded-full" style={{ backgroundColor: t.color }} />
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">
-                    {t.name} <span className="font-normal text-slate-500">· {t.duration_minutes} min</span>
+                    {t.name} <span className="font-normal text-slate-500">· {t.duration_minutes} min · {offeredLocations(t).map((l) => LOCATIONS[l].split(" (")[0]).join(", ")}</span>
                     {!t.active && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">Hidden</span>}
                   </div>
                   <a className="truncate text-xs text-brand-strong hover:underline" href={link} target="_blank" rel="noreferrer">{link}</a>
@@ -324,19 +325,34 @@ function AvailabilityForm({ settings, onSaved }: { settings: BookingSettings; on
 
 function EventTypeModal({ initial, onClose, onSaved }: { initial: Partial<EventType>; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState<Partial<EventType>>(initial);
+  const [where, setWhere] = useState<LocationType[]>(() =>
+    offeredLocations({ location_type: "google_meet", location_detail: null, ...initial })
+  );
+  const [details, setDetails] = useState<Partial<Record<LocationType, string>>>(() =>
+    Object.fromEntries(
+      LOCATION_TYPES.map((l) => [l, locationDetail({ location_type: "google_meet", location_detail: null, ...initial }, l) ?? ""])
+    )
+  );
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
   const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (where.length === 0) return setError("Tick at least one place this meeting can happen.");
+    const location_details = Object.fromEntries(
+      where.filter((l) => l === "in_person" || l === "custom").flatMap((l) => (details[l]?.trim() ? [[l, details[l]!.trim()]] : []))
+    );
     const row = {
       name: form.name?.trim() ?? "",
       slug: slugify(form.slug || form.name || ""),
       description: form.description?.trim() || null,
       duration_minutes: Number(form.duration_minutes) || 30,
-      location_type: form.location_type ?? "google_meet",
-      location_detail: form.location_detail?.trim() || null,
+      location_types: where,
+      location_details,
+      // The first ticked location, for anything that still reads a single location.
+      location_type: where[0],
+      location_detail: location_details[where[0]] ?? null,
       color: form.color ?? "#0098ff",
       active: form.active ?? true,
     };
@@ -364,18 +380,36 @@ function EventTypeModal({ initial, onClose, onSaved }: { initial: Partial<EventT
             <input className="input h-[38px] p-1" type="color" value={form.color ?? "#0098ff"} onChange={(e) => setForm({ ...form, color: e.target.value })} />
           </Field>
         </div>
-        <Field label="Where">
-          <select className="input" value={form.location_type} onChange={(e) => setForm({ ...form, location_type: e.target.value as LocationType })}>
-            {Object.entries(LOCATIONS).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
-        </Field>
-        {(form.location_type === "in_person" || form.location_type === "custom") && (
-          <Field label="Address or details">
-            <input className="input" value={form.location_detail ?? ""} onChange={(e) => setForm({ ...form, location_detail: e.target.value })} />
-          </Field>
-        )}
+        <fieldset>
+          <legend className="label">Where</legend>
+          <p className="text-xs text-slate-500">Tick every option you offer. If you tick more than one, the client chooses when they book.</p>
+          <div className="mt-2 space-y-2">
+            {LOCATION_TYPES.map((l) => {
+              const on = where.includes(l);
+              return (
+                <div key={l}>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="accent-brand"
+                      checked={on}
+                      onChange={(e) => setWhere(e.target.checked ? LOCATION_TYPES.filter((x) => x === l || where.includes(x)) : where.filter((x) => x !== l))}
+                    />
+                    {LOCATIONS[l]}
+                  </label>
+                  {on && (l === "in_person" || l === "custom") && (
+                    <input
+                      className="input mt-1.5 ml-6 w-[calc(100%-1.5rem)]"
+                      value={details[l] ?? ""}
+                      onChange={(e) => setDetails({ ...details, [l]: e.target.value })}
+                      placeholder={l === "in_person" ? "Address" : "Details shown to the client"}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </fieldset>
         <Field label="Description (shown on the booking page)">
           <textarea className="input min-h-[70px]" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         </Field>

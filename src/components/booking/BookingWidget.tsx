@@ -4,25 +4,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, parseISO, startOfMonth, startOfWeek } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
+import { LOCATION_LABEL } from "@/lib/booking/locations";
+import type { LocationType } from "@/lib/types";
 
 export type PublicEventType = {
   slug: string;
   name: string;
   description: string | null;
   duration_minutes: number;
-  location_type: "google_meet" | "phone" | "in_person" | "custom";
-  location_detail: string | null;
+  /** Where the meeting can happen; the booker picks one when there's more than one. */
+  locations: { type: LocationType; detail: string | null }[];
   color: string;
 };
 
 type Confirmation = { start: string; end: string; meetLink: string | null; location?: string };
 
-const LOCATION_LABEL = {
-  google_meet: "Google Meet video call",
-  phone: "Phone call",
-  in_person: "In person",
-  custom: "",
-};
+function locationText(l: PublicEventType["locations"][number]) {
+  if (l.type === "custom") return l.detail || LOCATION_LABEL.custom;
+  return l.detail ? `${LOCATION_LABEL[l.type]}: ${l.detail}` : LOCATION_LABEL[l.type];
+}
 
 export function BookingWidget({ eventType, ownerName, embedded }: { eventType: PublicEventType; ownerName: string; embedded?: boolean }) {
   // Empty until the browser tells us the visitor's timezone.
@@ -90,9 +90,10 @@ export function BookingWidget({ eventType, ownerName, embedded }: { eventType: P
     return tz && !all.includes(tz) ? [tz, ...all] : all;
   }, [tz]);
 
-  const location = eventType.location_type === "custom" || eventType.location_type === "in_person"
-    ? eventType.location_detail || LOCATION_LABEL[eventType.location_type]
-    : LOCATION_LABEL[eventType.location_type];
+  const location =
+    eventType.locations.length === 1
+      ? locationText(eventType.locations[0])
+      : eventType.locations.map((l) => LOCATION_LABEL[l.type]).join(" / ");
 
   return (
     <div ref={rootRef} className={clsx("mx-auto w-full max-w-3xl", !embedded && "card overflow-hidden")}>
@@ -239,13 +240,23 @@ function DetailsForm({
   onBooked: (c: Confirmation) => void;
   onTaken: () => void;
 }) {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "", website: "" });
+  const choices = eventType.locations;
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    message: "",
+    website: "",
+    location: choices.length === 1 ? choices[0].type : "",
+  });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const needsPhone = eventType.location_type === "phone";
+  const needsPhone = form.location === "phone";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.location) return setError("Please choose where you'd like to meet.");
     setBusy(true);
     setError(null);
     const res = await fetch("/api/book", {
@@ -269,6 +280,33 @@ function DetailsForm({
     <form onSubmit={submit} className="space-y-3">
       <button type="button" onClick={onBack} className="text-sm text-slate-500 hover:text-slate-800">← Back</button>
       <h2 className="font-semibold">Your details</h2>
+      {choices.length > 1 && (
+        <fieldset>
+          <legend className="label">Where would you like to meet? *</legend>
+          <div className="mt-1 grid gap-2 sm:grid-cols-2">
+            {choices.map((l) => (
+              <label
+                key={l.type}
+                className={clsx(
+                  "flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 text-sm transition",
+                  form.location === l.type ? "font-medium" : "border-slate-200 text-slate-600 hover:border-slate-300"
+                )}
+                style={form.location === l.type ? { borderColor: eventType.color, backgroundColor: `${eventType.color}0f` } : undefined}
+              >
+                <input
+                  type="radio"
+                  name="location"
+                  className="mt-0.5"
+                  style={{ accentColor: eventType.color }}
+                  checked={form.location === l.type}
+                  onChange={() => setForm({ ...form, location: l.type })}
+                />
+                <span>{locationText(l)}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className="label">Name *</span>
