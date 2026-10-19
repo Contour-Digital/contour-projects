@@ -3,16 +3,31 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
-import type { Client, Stage } from "@/lib/types";
+import type { Client, HostingSubscription, Stage } from "@/lib/types";
+import { HOSTING_LABELS } from "@/lib/clients";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { StageBadge } from "@/components/ui/StageBadge";
 import { ClientForm } from "@/components/clients/ClientForm";
+import { saveClient } from "@/components/clients/saveClient";
 
 type Row = Client & { projects: { id: string; name: string; stage_id: string; archived: boolean }[] };
+
+type MaintenanceFilter = "all" | "yes" | "no";
+
+const GROUPS: { key: HostingSubscription | "none"; title: string }[] = [
+  ...(Object.entries(HOSTING_LABELS) as [HostingSubscription, string][]).map(([key, label]) => ({ key, title: `${label} hosting` })),
+  { key: "none", title: "No hosting subscription" },
+];
+
+/** Maintenance clients first, then by name. */
+const byMaintenanceThenName = (a: Row, b: Row) =>
+  Number(b.maintenance_subscription) - Number(a.maintenance_subscription) ||
+  (a.company || a.name).localeCompare(b.company || b.name);
 
 async function load() {
   const supabase = createClient();
@@ -28,13 +43,19 @@ export default function ClientsPage() {
   const { data, error, loading } = useData(load);
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
+  const [maintenance, setMaintenance] = useState<MaintenanceFilter>("all");
+  const [showFormer, setShowFormer] = useState(false);
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (data?.clients ?? []).filter((c) =>
-      !q || [c.name, c.company, c.email, c.phone].some((v) => v?.toLowerCase().includes(q))
-    );
-  }, [data, search]);
+    return (data?.clients ?? [])
+      .filter((c) => !q || [c.name, c.company, c.email, c.phone].some((v) => v?.toLowerCase().includes(q)))
+      .filter((c) => maintenance === "all" || c.maintenance_subscription === (maintenance === "yes"))
+      .sort(byMaintenanceThenName);
+  }, [data, search, maintenance]);
+
+  const current = rows.filter((c) => !c.offboarded_at);
+  const former = rows.filter((c) => c.offboarded_at);
 
   if (error) return <p className="text-red-600">{error}</p>;
   if (loading || !data) return <p className="text-slate-500">Loading…</p>;
@@ -43,21 +64,85 @@ export default function ClientsPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Clients"
-        subtitle={`${data.clients.length} clients`}
+        subtitle={`${data.clients.filter((c) => !c.offboarded_at).length} current clients`}
         actions={
           <>
             <input className="input w-56" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <select
+              className="input w-auto"
+              aria-label="Maintenance subscription"
+              value={maintenance}
+              onChange={(e) => setMaintenance(e.target.value as MaintenanceFilter)}
+            >
+              <option value="all">All clients</option>
+              <option value="yes">On maintenance</option>
+              <option value="no">No maintenance</option>
+            </select>
             <Button onClick={() => setAdding(true)}>＋ New client</Button>
           </>
         }
       />
+      <div className="space-y-6">
+        {GROUPS.map((g) => {
+          const groupRows = current.filter((c) => (c.hosting_subscription ?? "none") === g.key);
+          if (groupRows.length === 0 && g.key === "none") return null;
+          return <ClientGroup key={g.key} title={g.title} rows={groupRows} stages={data.stages} />;
+        })}
+        {current.length === 0 && <p className="card px-4 py-8 text-center text-sm text-slate-500">No clients match.</p>}
+
+        {former.length > 0 && (
+          <div>
+            <button className="text-sm font-medium text-slate-500 hover:text-slate-800" onClick={() => setShowFormer(!showFormer)}>
+              {showFormer ? "▾" : "▸"} Former clients ({former.length})
+            </button>
+            {showFormer && (
+              <div className="mt-3">
+                <ClientGroup rows={former} stages={data.stages} former />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {adding && (
+        <Modal title="New client" onClose={() => setAdding(false)} wide>
+          <ClientForm
+            submitLabel="Create client"
+            onCancel={() => setAdding(false)}
+            onSubmit={async (values, login) => {
+              const res = await saveClient(null, values, login);
+              if ("error" in res) return res.error;
+              router.push(`/clients/${res.id}`);
+              return null;
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function ClientGroup({ title, rows, stages, former }: { title?: string; rows: Row[]; stages: Stage[]; former?: boolean }) {
+  const router = useRouter();
+  const onMaintenance = rows.filter((c) => c.maintenance_subscription).length;
+  return (
+    <section>
+      {title && (
+        <h2 className="mb-2 flex items-baseline gap-2 text-sm font-semibold">
+          {title}
+          <span className="text-xs font-normal text-slate-500">
+            {rows.length} client{rows.length === 1 ? "" : "s"} · {onMaintenance} on maintenance
+          </span>
+        </h2>
+      )}
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-2.5 font-medium">Client</th>
               <th className="hidden px-4 py-2.5 font-medium md:table-cell">Contact</th>
-              <th className="px-4 py-2.5 font-medium">Projects</th>
+              <th className="w-32 px-4 py-2.5 font-medium">{former ? "Left" : "Maintenance"}</th>
+              <th className="hidden w-48 px-4 py-2.5 font-medium sm:table-cell">Projects</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -70,14 +155,23 @@ export default function ClientsPage() {
                   {c.company && <div className="text-xs text-slate-500">{c.name}</div>}
                 </td>
                 <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
-                  <div>{c.email}</div>
+                  <div className="truncate">{c.email}</div>
                   <div className="text-xs text-slate-500">{c.phone}</div>
                 </td>
                 <td className="px-4 py-3">
+                  {former ? (
+                    <span className="text-slate-500">{c.offboarded_at && format(parseISO(c.offboarded_at), "MMM yyyy")}</span>
+                  ) : c.maintenance_subscription ? (
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Yes</span>
+                  ) : (
+                    <span className="text-xs text-slate-400">No</span>
+                  )}
+                </td>
+                <td className="hidden px-4 py-3 sm:table-cell">
                   <div className="flex flex-wrap gap-1.5">
                     {c.projects.filter((p) => !p.archived).map((p) => (
                       <span key={p.id} title={p.name}>
-                        <StageBadge stage={data.stages.find((s) => s.id === p.stage_id)} />
+                        <StageBadge stage={stages.find((s) => s.id === p.stage_id)} />
                       </span>
                     ))}
                   </div>
@@ -86,27 +180,12 @@ export default function ClientsPage() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-slate-500">No clients yet.</td>
+                <td colSpan={4} className="px-4 py-6 text-center text-slate-500">No clients here yet.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-
-      {adding && (
-        <Modal title="New client" onClose={() => setAdding(false)} wide>
-          <ClientForm
-            submitLabel="Create client"
-            onCancel={() => setAdding(false)}
-            onSubmit={async (values) => {
-              const { data, error } = await createClient().from("clients").insert(values).select("id").single();
-              if (error) return error.message;
-              router.push(`/clients/${data.id}`);
-              return null;
-            }}
-          />
-        </Modal>
-      )}
-    </div>
+    </section>
   );
 }

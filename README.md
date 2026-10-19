@@ -4,7 +4,8 @@ Contour Digital's own project dashboard and booking page, replacing ClickUp and 
 
 - **Board**: every client project in a column for its stage (Lead → Proposal → Onboarding → Design → Development → Client Review → Launch → Complete). Drag cards between stages.
 - **Stage automations**: each stage has a task checklist. When a project enters a stage, that checklist is added to the project with due dates. A stage can also move projects on to the next stage by itself once its checklist is done.
-- **Clients**: contact details, ABN, address and notes, linked to their projects and bookings.
+- **Clients**: contact details, ABN, address, hosting and maintenance subscriptions, lead source, Google Drive link and notes, linked to their projects and bookings. The Clients tab lists them by hosting subscription. Offboarding moves a client to Former clients without deleting anything.
+- **Domain logins**: for a domain managed externally, the registrar username and password are encrypted with Supabase Vault in the Sydney database. They only show when revealed on the client page, and every reveal is logged in `domain_login_log`.
 - **My tasks**: every open task across active projects, grouped by overdue / today / this week.
 - **Booking page**: a Calendly-style page that reads your Google Calendar for busy times, adds each booking to it (with a Google Meet link) and emails the invite. Embed it on any website with two lines of HTML.
 
