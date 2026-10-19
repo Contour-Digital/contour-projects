@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PREFIXES = ["/login", "/book", "/embed", "/api/availability", "/api/book", "/embed.js"];
+const PUBLIC_PREFIXES = ["/login", "/book", "/embed", "/api/availability", "/api/book", "/api/calendar", "/embed.js"];
 
 const REQUIRED_ENV = [
   "NEXT_PUBLIC_SUPABASE_URL",

@@ -34,3 +34,9 @@ export function describeLocation(t: LocationOptions, type: LocationType): string
   if (type === "custom") return detail ?? LOCATION_LABEL.custom;
   return detail ? `${LOCATION_LABEL[type]}: ${detail}` : LOCATION_LABEL[type];
 }
+export const LOCATIONS: Record<LocationType, string> = {
+  google_meet: "Google Meet (link added automatically)",
+  phone: "Phone call (we call them)",
+  in_person: "In person",
+  custom: "Other / custom",
+};

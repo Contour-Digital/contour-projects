@@ -1,14 +1,16 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Google Calendar over plain REST: the official SDK is large and we only need
-// four calls (token, freebusy, insert, delete).
+// Google Calendar and Gmail over plain REST: the official SDK is large and we
+// only need a few calls (token, freebusy, insert, delete, send).
 
 const SCOPES = [
   "openid",
   "email",
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/calendar.freebusy",
+  // Confirmation emails are sent from the connected account itself.
+  "https://www.googleapis.com/auth/gmail.send",
 ];
 
 export function siteUrl() {
@@ -43,6 +45,7 @@ type TokenResponse = {
   expires_in: number;
   refresh_token?: string;
   id_token?: string;
+  scope?: string;
 };
 
 async function tokenRequest(body: Record<string, string>): Promise<TokenResponse> {
@@ -80,6 +83,7 @@ export async function exchangeCodeAndStore(code: string) {
     refresh_token: tokens.refresh_token,
     access_token: tokens.access_token,
     access_token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+    scopes: tokens.scope ?? null,
     connected_at: new Date().toISOString(),
   });
   if (error) throw error;
@@ -117,16 +121,16 @@ async function accessToken(): Promise<string | null> {
   return tokens.access_token;
 }
 
-async function googleFetch(path: string, init: RequestInit = {}) {
+async function googleFetch(path: string, init: RequestInit = {}, base = "https://www.googleapis.com/calendar/v3") {
   const token = await accessToken();
   if (!token) return null;
-  const res = await fetch(`https://www.googleapis.com/calendar/v3${path}`, {
+  const res = await fetch(`${base}${path}`, {
     ...init,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...init.headers },
     cache: "no-store",
   });
   if (!res.ok && res.status !== 410 && res.status !== 404) {
-    throw new Error(`Google Calendar ${path} failed: ${res.status} ${await res.text()}`);
+    throw new Error(`Google ${path} failed: ${res.status} ${await res.text()}`);
   }
   return res;
 }
@@ -153,15 +157,19 @@ export type NewEvent = {
   start: Date;
   end: Date;
   timezone: string;
-  attendee: { email: string; name: string };
+  /** Left out, the event goes on your calendar only and nobody is invited. */
+  attendee?: { email: string; name: string };
   location?: string;
   addMeet: boolean;
   requestId: string;
 };
 
-/** Creates the event and emails the invite. Returns null when Google isn't connected. */
+/** Creates the event and emails the invite (if there's an attendee). Returns null when Google isn't connected. */
 export async function createEvent(calendarId: string, e: NewEvent) {
-  const params = new URLSearchParams({ sendUpdates: "all", conferenceDataVersion: e.addMeet ? "1" : "0" });
+  const params = new URLSearchParams({
+    sendUpdates: e.attendee ? "all" : "none",
+    conferenceDataVersion: e.addMeet ? "1" : "0",
+  });
   const res = await googleFetch(`/calendars/${encodeURIComponent(calendarId)}/events?${params}`, {
     method: "POST",
     body: JSON.stringify({
@@ -170,7 +178,7 @@ export async function createEvent(calendarId: string, e: NewEvent) {
       location: e.location,
       start: { dateTime: e.start.toISOString(), timeZone: e.timezone },
       end: { dateTime: e.end.toISOString(), timeZone: e.timezone },
-      attendees: [{ email: e.attendee.email, displayName: e.attendee.name }],
+      attendees: e.attendee ? [{ email: e.attendee.email, displayName: e.attendee.name }] : [],
       reminders: { useDefault: true },
       conferenceData: e.addMeet
         ? { createRequest: { requestId: e.requestId, conferenceSolutionKey: { type: "hangoutsMeet" } } }
@@ -179,11 +187,35 @@ export async function createEvent(calendarId: string, e: NewEvent) {
   });
   if (!res) return null;
   const json = await res.json();
-  return { id: json.id as string, meetLink: (json.hangoutLink as string | undefined) ?? null };
+  return {
+    id: json.id as string,
+    icalUid: (json.iCalUID as string | undefined) ?? null,
+    meetLink: (json.hangoutLink as string | undefined) ?? null,
+  };
 }
 
 export async function deleteEvent(calendarId: string, eventId: string) {
   await googleFetch(`/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=all`, {
     method: "DELETE",
   });
+}
+
+/** The connected account's address, if Google allowed the app to send email from it. */
+export async function gmailSender(): Promise<string | null> {
+  if (!googleConfigured()) return null;
+  const admin = createAdminClient();
+  const { data } = await admin.from("google_connection").select("email,scopes").eq("id", 1).maybeSingle();
+  if (!data?.email || !data.scopes?.includes("auth/gmail.send")) return null;
+  return data.email;
+}
+
+/** Sends a raw MIME message from the connected Gmail account. */
+export async function sendGmail(mime: string) {
+  const res = await googleFetch(
+    "/users/me/messages/send",
+    { method: "POST", body: JSON.stringify({ raw: Buffer.from(mime).toString("base64url") }) },
+    "https://gmail.googleapis.com/gmail/v1"
+  );
+  if (!res) throw new Error("Google isn't connected");
+  if (!res.ok) throw new Error(`Gmail send failed: ${res.status}`);
 }
