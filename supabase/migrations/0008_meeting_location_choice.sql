@@ -23,13 +23,14 @@ alter table public.event_types
   );
 
 -- What the booker chose, and the text shown for it (address, phone details).
+-- bookings.location may already exist from the ad hoc meetings migration; share it.
 alter table public.bookings
   add column location_type text
     check (location_type in ('google_meet', 'phone', 'in_person', 'custom')),
-  add column location text;
+  add column if not exists location text;
 
 update public.bookings b
 set location_type = t.location_type,
-    location = case when t.location_type in ('in_person', 'custom') then t.location_detail end
+    location = coalesce(b.location, case when t.location_type in ('in_person', 'custom') then t.location_detail end)
 from public.event_types t
 where b.event_type_id = t.id;
