@@ -5,7 +5,8 @@ Contour Digital's own project dashboard and booking page, replacing ClickUp and 
 - **Board**: every client project in a column for its stage (Lead → Proposal → Onboarding → Design → Development → Client Review → Launch → Complete). Drag cards between stages.
 - **Stage automations**: each stage has a task checklist. When a project enters a stage, that checklist is added to the project with due dates. A stage can also move projects on to the next stage by itself once its checklist is done.
 - **Clients**: contact details, ABN, address and notes, linked to their projects and bookings.
-- **My tasks**: every open task across active projects, grouped by overdue / today / this week.
+- **My tasks**: every open task across active projects, plus your own admin tasks, grouped by overdue / today / this week. Add admin tasks here and set them to repeat.
+- **Business & Outreach**: admin, business management and client outreach tasks (e.g. remind clients to put up a public holiday notice). Each has subtasks, a due date, an optional repeat, notes, and a list of clients to email with an *emailed* tick for each. Ticking off a repeating task creates the next one.
 - **Booking page**: a Calendly-style page that reads your Google Calendar for busy times, adds each booking to it (with a Google Meet link) and emails the invite. Embed it on any website with two lines of HTML.
 
 Next.js (App Router) + TypeScript + Tailwind on the front end, Supabase (Postgres + Auth) behind it, hosted on Vercel. Same stack as the Wedding Planner app.

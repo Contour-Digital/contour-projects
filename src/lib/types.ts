@@ -122,3 +122,31 @@ export type Booking = {
   meet_link: string | null;
   created_at: string;
 };
+
+export type AdminArea = "admin" | "business" | "outreach";
+export type Recurrence = "none" | "daily" | "weekly" | "fortnightly" | "monthly" | "quarterly" | "yearly";
+
+export type AdminTask = {
+  id: string;
+  parent_id: string | null;
+  area: AdminArea;
+  title: string;
+  notes: string | null;
+  due_date: string | null;
+  recurrence: Recurrence;
+  done: boolean;
+  done_at: string | null;
+  next_created: boolean;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminTaskClient = {
+  task_id: string;
+  client_id: string;
+  emailed: boolean;
+  emailed_at: string | null;
+  note: string | null;
+  created_at: string;
+};
