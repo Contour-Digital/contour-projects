@@ -93,6 +93,9 @@ export type Activity = {
 
 export type TimeRange = { start: string; end: string }; // "HH:mm"
 export type WeeklyHours = Record<"1" | "2" | "3" | "4" | "5" | "6" | "7", TimeRange[]>;
+/** Hours that apply on start_date and every `every_days` days after it. */
+export type RepeatingRule = { start_date: string; every_days: number; hours: TimeRange[] }; // start_date "yyyy-MM-dd"
+export type AvailabilityMode = "weekly" | "repeating";
 
 export type BookingSettings = {
   id: 1;
@@ -100,6 +103,8 @@ export type BookingSettings = {
   timezone: string;
   calendar_id: string;
   weekly_hours: WeeklyHours;
+  availability_mode: AvailabilityMode;
+  repeating_hours: RepeatingRule[];
   min_notice_hours: number;
   max_days_ahead: number;
   buffer_minutes: number;
