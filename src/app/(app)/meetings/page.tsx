@@ -19,7 +19,7 @@ async function load() {
   return { bookings: bookings as Booking[], types: types as EventType[] };
 }
 
-export default function BookingsPage() {
+export default function MeetingsPage() {
   const { data, reload, error, loading } = useData(load);
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export default function BookingsPage() {
       : data.bookings.filter((b) => b.end_at < now).reverse();
 
   async function cancel(b: Booking) {
-    if (!confirm(`Cancel ${b.name}'s booking? They'll get a cancellation email from Google Calendar.`)) return;
+    if (!confirm(`Cancel the meeting with ${b.name}? They'll get a cancellation email from Google Calendar.`)) return;
     setBusyId(b.id);
     const res = await fetch(`/api/bookings/${b.id}/cancel`, { method: "POST" });
     setBusyId(null);
@@ -45,9 +45,9 @@ export default function BookingsPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader
-        title="Bookings"
-        subtitle="Appointments booked through your booking page."
-        actions={<Link href="/settings/booking"><Button variant="secondary">Booking settings</Button></Link>}
+        title="Meetings"
+        subtitle="Meetings booked through your booking page."
+        actions={<Link href="/settings/booking"><Button variant="secondary">Booking page settings</Button></Link>}
       />
       <div className="mb-4 flex gap-1 rounded-lg bg-slate-100 p-1 text-sm sm:w-fit">
         {(["upcoming", "past"] as const).map((t) => (
@@ -94,7 +94,7 @@ export default function BookingsPage() {
             </li>
           );
         })}
-        {rows.length === 0 && <li className="card p-8 text-center text-slate-500">No {tab} bookings.</li>}
+        {rows.length === 0 && <li className="card p-8 text-center text-slate-500">No {tab} meetings.</li>}
       </ul>
     </div>
   );

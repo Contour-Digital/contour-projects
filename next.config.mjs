@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Old dashboard addresses, kept working for bookmarks.
+  async redirects() {
+    return [
+      { source: "/board", destination: "/projects", permanent: false },
+      { source: "/bookings", destination: "/meetings", permanent: false },
+    ];
+  },
   async headers() {
     return [
       // The dashboard must never be framed by another site.

@@ -109,7 +109,7 @@ export default function ClientPage() {
           </section>
 
           <section className="card p-5">
-            <h2 className="mb-3 font-semibold">Bookings</h2>
+            <h2 className="mb-3 font-semibold">Meetings</h2>
             {data.bookings.length === 0 && <p className="text-sm text-slate-500">No bookings.</p>}
             <ul className="space-y-2 text-sm">
               {data.bookings.map((b) => (

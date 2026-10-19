@@ -21,7 +21,7 @@ export default function LoginPage() {
     const { error } = await createClient().auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) return setError(error.message);
-    router.replace("/board");
+    router.replace("/projects");
     router.refresh();
   }
 
