@@ -14,6 +14,11 @@ const NAV = [
   { href: "/bookings", label: "Bookings", icon: "◷" },
   { href: "/settings/stages", label: "Stages & automations", icon: "⚙" },
   { href: "/settings/booking", label: "Booking page", icon: "⌘" },
+  { href: "/projects", label: "Current Projects", short: "Projects", icon: "☰" },
+  { href: "/tasks", label: "My tasks", short: "Tasks", icon: "✓" },
+  { href: "/clients", label: "Clients", short: "Clients", icon: "◉" },
+  { href: "/meetings", label: "Meetings", short: "Meetings", icon: "◷" },
+  { href: "/settings", label: "Settings", short: "Settings", icon: "⚙" },
 ];
 
 export function Sidebar({ email }: { email: string }) {
@@ -27,13 +32,13 @@ export function Sidebar({ email }: { email: string }) {
   }
 
   const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(href + "/") || (href === "/board" && pathname.startsWith("/projects"));
+    pathname === href || pathname.startsWith(href + "/");
 
   return (
     <>
       {/* Desktop */}
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-slate-200 bg-white md:flex">
-        <Link href="/board" className="block px-5 pb-5 pt-6">
+        <Link href="/projects" className="block px-5 pb-5 pt-6">
           <Logo className="h-[30px]" />
           <div className="mt-2 text-xs font-medium uppercase tracking-widest text-slate-400">Projects</div>
         </Link>
@@ -60,29 +65,22 @@ export function Sidebar({ email }: { email: string }) {
 
       {/* Mobile */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
-        <Link href="/board" aria-label="Board">
+        <Link href="/projects" aria-label="Current Projects">
           <Logo className="h-6" />
         </Link>
         <span className="text-[11px] font-medium uppercase tracking-widest text-slate-400">Projects</span>
       </header>
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-slate-200 bg-white md:hidden">
-        {NAV.slice(0, 4).map((item) => (
+        {NAV.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={clsx("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]", isActive(item.href) ? "text-brand-strong" : "text-slate-500")}
           >
             <span className="text-base">{item.icon}</span>
-            {item.label}
+            {item.short}
           </Link>
         ))}
-        <Link
-          href="/settings/stages"
-          className={clsx("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]", pathname.startsWith("/settings") ? "text-brand-strong" : "text-slate-500")}
-        >
-          <span className="text-base">⚙</span>
-          Settings
-        </Link>
       </nav>
     </>
   );

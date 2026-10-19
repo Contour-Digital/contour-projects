@@ -101,10 +101,10 @@ export default function ProjectPage() {
   async function deleteProject() {
     if (!confirm(`Delete "${project.name}" and all its tasks and notes? This can't be undone.`)) return;
     await supabase.from("projects").delete().eq("id", id);
-    router.push("/board");
+    router.push("/projects");
   }
 
-  // Current stage first, then the others in board order, then tasks with no stage.
+  // Current stage first, then the others in stage order, then tasks with no stage.
   const groups: { key: string; title: string; stage?: Stage; tasks: Task[] }[] = [];
   const ordered = [stage, ...stages.filter((s) => s.id !== project.stage_id)].filter(Boolean) as Stage[];
   for (const s of ordered) {
@@ -116,7 +116,7 @@ export default function ProjectPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <Link href="/board" className="text-sm text-slate-500 hover:text-slate-800">← Board</Link>
+      <Link href="/projects" className="text-sm text-slate-500 hover:text-slate-800">← Current Projects</Link>
 
       <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
         <div>
