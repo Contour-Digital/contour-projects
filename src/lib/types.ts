@@ -114,6 +114,10 @@ export type BookingSettings = {
   confirmation_enabled: boolean;
   confirmation_subject: string;
   confirmation_body: string;
+  /** Gmail "Send mail as" alias to send confirmations from; null = the connected address. */
+  confirmation_from_email: string | null;
+  /** Sender name on confirmations; null = owner_name. */
+  confirmation_from_name: string | null;
 };
 
 export type LocationType = "google_meet" | "phone" | "in_person" | "custom";

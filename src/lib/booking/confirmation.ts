@@ -185,14 +185,21 @@ export function emailText(body: string, links: CalendarLinks) {
   return `${body}\n\nAdd to your calendar:\nGoogle: ${links.google}\nOutlook: ${links.outlook}\nOutlook (work or school): ${links.office365}\nApple and others: ${links.ics}\n`;
 }
 
-export function emailHtml(body: string, links: CalendarLinks) {
+/** Contour Digital wordmark (1200 x 191), shown small under the calendar buttons. */
+export const EMAIL_LOGO_PATH = "/brand/contour-digital-wordmark.png";
+
+export function emailHtml(body: string, links: CalendarLinks, logoUrl?: string) {
   const paragraphs = body
     .split(/\n{2,}/)
     .map((p) => `<p style="margin:0 0 14px">${linkify(escapeHtml(p)).replace(/\n/g, "<br>")}</p>`)
     .join("");
   const button = (href: string, label: string) =>
     `<a href="${escapeHtml(href)}" style="display:inline-block;margin:0 6px 8px 0;padding:8px 14px;border:1px solid #cbd5e1;border-radius:8px;color:#0f172a;text-decoration:none;font-size:14px">${label}</a>`;
-  return `<!doctype html><html><body style="margin:0;padding:24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#0f172a"><div style="max-width:560px">${paragraphs}<p style="margin:20px 0 8px;font-weight:bold">Add to your calendar</p><div>${button(links.google, "Google Calendar")}${button(links.outlook, "Outlook.com")}${button(links.office365, "Outlook (work or school)")}${button(links.ics, "Apple Calendar / other")}</div></div></body></html>`;
+  return `<!doctype html><html><body style="margin:0;padding:24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#0f172a"><div style="max-width:560px">${paragraphs}<p style="margin:20px 0 8px;font-weight:bold">Add to your calendar</p><div>${button(links.google, "Google Calendar")}${button(links.outlook, "Outlook.com")}${button(links.office365, "Outlook (work or school)")}${button(links.ics, "Apple Calendar / other")}</div>${
+    logoUrl
+      ? `<div style="margin-top:28px;padding-top:16px;border-top:1px solid #e2e8f0"><img src="${escapeHtml(logoUrl)}" alt="Contour Digital" width="150" height="24" style="display:block;width:150px;height:24px;border:0"></div>`
+      : ""
+  }</div></body></html>`;
 }
 
 function encodeHeader(s: string) {

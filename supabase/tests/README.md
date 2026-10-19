@@ -13,6 +13,7 @@ psql -d contour_test -v ON_ERROR_STOP=1 \
   -f supabase/migrations/0006_ad_hoc_meetings.sql \
   -f supabase/migrations/0008_meeting_location_choice.sql \
   -f supabase/migrations/0009_meeting_questions.sql \
+  -f supabase/migrations/0010_confirmation_sender.sql \
   -f supabase/tests/automations_test.sql \
   -f supabase/tests/client_details_test.sql \
   -f supabase/tests/ad_hoc_meetings_test.sql \
