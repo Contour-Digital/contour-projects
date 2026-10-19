@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import { meetingVars } from "@/lib/booking/confirmation";
-import { LOCATIONS } from "@/lib/booking/locations";
+import { LOCATIONS, LOCATION_TYPES, locationDetail as detailFor, offeredLocations } from "@/lib/booking/locations";
 import type { BookingSettings, Client, EventType, LocationType } from "@/lib/types";
 import { Modal } from "@/components/ui/Modal";
 import { Field } from "@/components/ui/Field";
@@ -40,8 +40,8 @@ export function AdHocMeetingModal({
   const [typeId, setTypeId] = useState<string>(firstType?.id ?? OTHER);
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState(firstType?.duration_minutes ?? 30);
-  const [locationType, setLocationType] = useState<LocationType>(firstType?.location_type ?? "google_meet");
-  const [locationDetail, setLocationDetail] = useState(firstType?.location_detail ?? "");
+  const [locationType, setLocationType] = useState<LocationType>(firstType ? offeredLocations(firstType)[0] : "google_meet");
+  const [locationDetail, setLocationDetail] = useState(firstType ? detailFor(firstType, offeredLocations(firstType)[0]) ?? "" : "");
   const [date, setDate] = useState(() => formatInTimeZone(new Date(), settings.timezone, "yyyy-MM-dd"));
   const [time, setTime] = useState("10:00");
   const [details, setDetails] = useState("");
@@ -65,8 +65,9 @@ export function AdHocMeetingModal({
     const t = types.find((x) => x.id === id);
     if (t) {
       setDuration(t.duration_minutes);
-      setLocationType(t.location_type);
-      setLocationDetail(t.location_detail ?? "");
+      const first = offeredLocations(t)[0];
+      setLocationType(first);
+      setLocationDetail(detailFor(t, first) ?? "");
     }
   }
 
@@ -197,9 +198,18 @@ export function AdHocMeetingModal({
             </Field>
           </div>
           <Field label="Where">
-            <select className="input" value={locationType} onChange={(e) => setLocationType(e.target.value as LocationType)}>
-              {Object.entries(LOCATIONS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
+            <select
+              className="input"
+              value={locationType}
+              onChange={(e) => {
+                const l = e.target.value as LocationType;
+                setLocationType(l);
+                if (type) setLocationDetail(detailFor(type, l) ?? "");
+              }}
+            >
+              {/* A meeting type lists only the locations it offers. */}
+              {(type ? offeredLocations(type) : LOCATION_TYPES).map((l) => (
+                <option key={l} value={l}>{LOCATIONS[l]}</option>
               ))}
             </select>
           </Field>

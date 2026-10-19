@@ -122,8 +122,12 @@ export type EventType = {
   name: string;
   description: string | null;
   duration_minutes: number;
+  /** First offered location; kept for older code. */
   location_type: LocationType;
   location_detail: string | null;
+  /** Every location the booker can choose from. */
+  location_types: LocationType[];
+  location_details: Partial<Record<LocationType, string>>;
   color: string;
   active: boolean;
   position: number;
@@ -150,6 +154,8 @@ export type Booking = {
   /** One-off title when an ad hoc meeting isn't one of the meeting types. */
   title: string | null;
   location: string | null;
+  /** The location type the booker chose. */
+  location_type: LocationType | null;
   invite_sent: boolean;
   confirmation_sent_at: string | null;
   ical_uid: string | null;

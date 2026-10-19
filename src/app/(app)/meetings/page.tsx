@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
 import type { Booking, BookingSettings, Client, EventType } from "@/lib/types";
+import { LOCATION_LABEL } from "@/lib/booking/locations";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { AdHocMeetingModal } from "@/components/meetings/AdHocMeetingModal";
@@ -107,6 +108,9 @@ export default function MeetingsPage() {
                   {b.email && <> · <a className="hover:underline" href={`mailto:${b.email}`}>{b.email}</a></>}
                   {b.phone && <> · <a className="hover:underline" href={`tel:${b.phone}`}>{b.phone}</a></>}
                 </div>
+                {(b.location_type || b.location) && (
+                  <div className="text-slate-500">◎ {b.location ?? LOCATION_LABEL[b.location_type!]}</div>
+                )}
                 {b.message && <p className="mt-1.5 whitespace-pre-wrap text-slate-600">{b.message}</p>}
                 <div className="mt-2 flex flex-wrap gap-3 text-xs">
                   {b.meet_link && <a className="text-brand-strong hover:underline" href={b.meet_link} target="_blank" rel="noreferrer">Google Meet link</a>}

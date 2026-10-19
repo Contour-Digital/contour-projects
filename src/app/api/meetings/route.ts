@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
       end_at: end.toISOString(),
       timezone: settings.timezone,
       location,
+      location_type: locationType,
     })
     .select("id")
     .single();
