@@ -1,3 +1,5 @@
+import type { Answer, Question } from "@/lib/booking/questions";
+
 export type Client = {
   id: string;
   name: string;
@@ -128,6 +130,8 @@ export type EventType = {
   /** Every location the booker can choose from. */
   location_types: LocationType[];
   location_details: Partial<Record<LocationType, string>>;
+  /** Pre-meeting questions asked on the booking page. */
+  questions: Question[];
   color: string;
   active: boolean;
   position: number;
@@ -156,6 +160,8 @@ export type Booking = {
   location: string | null;
   /** The location type the booker chose. */
   location_type: LocationType | null;
+  /** The booker's answers to the meeting type's questions. */
+  answers: Answer[];
   invite_sent: boolean;
   confirmation_sent_at: string | null;
   ical_uid: string | null;

@@ -13,6 +13,7 @@ import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { LOCATIONS, LOCATION_TYPES, locationDetail, offeredLocations } from "@/lib/booking/locations";
 import { ConfirmationEmailForm } from "@/components/meetings/ConfirmationEmailForm";
+import { QUESTION_TYPES, cleanQuestions, hasOptions, type Question, type QuestionType } from "@/lib/booking/questions";
 
 const DAYS: { key: keyof WeeklyHours; label: string }[] = [
   { key: "1", label: "Monday" },
@@ -410,6 +411,7 @@ function RepeatingEditor({ rules, onChange, settings }: { rules: RepeatingRule[]
 
 function EventTypeModal({ initial, onClose, onSaved }: { initial: Partial<EventType>; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState<Partial<EventType>>(initial);
+  const [questions, setQuestions] = useState<Question[]>(initial.questions ?? []);
   const [where, setWhere] = useState<LocationType[]>(() =>
     offeredLocations({ location_type: "google_meet", location_detail: null, ...initial })
   );
@@ -425,6 +427,8 @@ function EventTypeModal({ initial, onClose, onSaved }: { initial: Partial<EventT
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (where.length === 0) return setError("Tick at least one place this meeting can happen.");
+    const cleaned = cleanQuestions(questions);
+    if ("error" in cleaned) return setError(cleaned.error);
     const location_details = Object.fromEntries(
       where.filter((l) => l === "in_person" || l === "custom").flatMap((l) => (details[l]?.trim() ? [[l, details[l]!.trim()]] : []))
     );
@@ -438,6 +442,7 @@ function EventTypeModal({ initial, onClose, onSaved }: { initial: Partial<EventT
       // The first ticked location, for anything that still reads a single location.
       location_type: where[0],
       location_detail: location_details[where[0]] ?? null,
+      questions: cleaned.questions,
       color: form.color ?? "#0098ff",
       active: form.active ?? true,
     };
@@ -498,6 +503,7 @@ function EventTypeModal({ initial, onClose, onSaved }: { initial: Partial<EventT
         <Field label="Description (shown on the booking page)">
           <textarea className="input min-h-[70px]" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         </Field>
+        <QuestionsEditor questions={questions} onChange={setQuestions} />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="accent-brand" checked={form.active ?? true} onChange={(e) => setForm({ ...form, active: e.target.checked })} />
           Bookable
@@ -526,5 +532,68 @@ function EventTypeModal({ initial, onClose, onSaved }: { initial: Partial<EventT
         </div>
       </form>
     </Modal>
+  );
+}
+
+function QuestionsEditor({ questions, onChange }: { questions: Question[]; onChange: (q: Question[]) => void }) {
+  const update = (i: number, patch: Partial<Question>) => onChange(questions.map((q, j) => (j === i ? { ...q, ...patch } : q)));
+  const move = (i: number, by: number) => {
+    const next = [...questions];
+    [next[i], next[i + by]] = [next[i + by], next[i]];
+    onChange(next);
+  };
+  const add = () =>
+    onChange([...questions, { id: crypto.randomUUID().slice(0, 8), label: "", type: "short_text", options: [], required: false }]);
+
+  return (
+    <fieldset>
+      <legend className="label">Questions for the client</legend>
+      <p className="text-xs text-slate-500">Asked on the booking page before they confirm. Their answers are saved with the booking.</p>
+      <div className="mt-2 space-y-2">
+        {questions.map((q, i) => (
+          <div key={q.id} className="rounded-lg border border-slate-200 p-3">
+            <div className="flex gap-2">
+              <input
+                className="input flex-1"
+                value={q.label}
+                onChange={(e) => update(i, { label: e.target.value })}
+                placeholder="e.g. What does your business do?"
+                aria-label="Question"
+              />
+              <select
+                className="input w-auto"
+                value={q.type}
+                onChange={(e) => update(i, { type: e.target.value as QuestionType })}
+                aria-label="Answer type"
+              >
+                {Object.entries(QUESTION_TYPES).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+            {hasOptions(q.type) && (
+              <textarea
+                className="input mt-2 min-h-[70px]"
+                value={q.options.join("\n")}
+                onChange={(e) => update(i, { options: e.target.value.split("\n") })}
+                placeholder={"One choice per line, e.g.\nWebsite\nSEO\nBranding"}
+                aria-label="Choices"
+              />
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+              <label className="flex items-center gap-1.5 text-sm">
+                <input type="checkbox" className="accent-brand" checked={q.required} onChange={(e) => update(i, { required: e.target.checked })} />
+                Required
+              </label>
+              <span className="flex-1" />
+              <button type="button" className="text-slate-500 hover:text-slate-800 disabled:opacity-30" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move up">↑</button>
+              <button type="button" className="text-slate-500 hover:text-slate-800 disabled:opacity-30" disabled={i === questions.length - 1} onClick={() => move(i, 1)} aria-label="Move down">↓</button>
+              <button type="button" className="text-red-600 hover:underline" onClick={() => onChange(questions.filter((_, j) => j !== i))}>Remove</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <Button type="button" size="sm" variant="secondary" className="mt-2" onClick={add}>＋ Add question</Button>
+    </fieldset>
   );
 }
