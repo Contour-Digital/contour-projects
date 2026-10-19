@@ -2,15 +2,17 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { format, parseISO } from "date-fns";
+import { addDays, format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
-import type { BookingSettings, EventType, LocationType, WeeklyHours } from "@/lib/types";
+import type { BookingSettings, EventType, LocationType, RepeatingRule, TimeRange, WeeklyHours } from "@/lib/types";
+import { hoursForDate } from "@/lib/booking/availability";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
-import { LOCATION_TYPES, locationDetail, offeredLocations } from "@/lib/booking/locations";
+import { LOCATIONS, LOCATION_TYPES, locationDetail, offeredLocations } from "@/lib/booking/locations";
+import { ConfirmationEmailForm } from "@/components/meetings/ConfirmationEmailForm";
 
 const DAYS: { key: keyof WeeklyHours; label: string }[] = [
   { key: "1", label: "Monday" },
@@ -22,15 +24,8 @@ const DAYS: { key: keyof WeeklyHours; label: string }[] = [
   { key: "7", label: "Sunday" },
 ];
 
-const LOCATIONS: Record<LocationType, string> = {
-  google_meet: "Google Meet (link added automatically)",
-  phone: "Phone call (we call them)",
-  in_person: "In person",
-  custom: "Other / custom",
-};
-
 const GOOGLE_MESSAGES: Record<string, { text: string; ok: boolean }> = {
-  connected: { text: "Google Calendar connected.", ok: true },
+  connected: { text: "Google connected.", ok: true },
   cancelled: { text: "Google connection was cancelled.", ok: false },
   "bad-state": { text: "That Google sign-in link expired. Please try again.", ok: false },
   error: { text: "Google connection failed. Check the client ID, secret and redirect URI, then try again.", ok: false },
@@ -47,7 +42,7 @@ async function load() {
   return {
     settings: settings as BookingSettings,
     types: types as EventType[],
-    google: ((google as { email: string | null; connected_at: string }[]) ?? [])[0] ?? null,
+    google: ((google as { email: string | null; connected_at: string; can_send_email: boolean }[]) ?? [])[0] ?? null,
   };
 }
 
@@ -82,6 +77,7 @@ function View({ googleConfigured, siteUrl }: { googleConfigured: boolean; siteUr
         <h2 className="font-semibold">1. Google Calendar</h2>
         <p className="mt-1 text-sm text-slate-500">
           Busy times on your calendar are hidden from the booking page, and every booking is added to it with an invite emailed to the person who booked.
+          Confirmation emails are sent from this Google account too.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           {data.google ? (
@@ -89,7 +85,10 @@ function View({ googleConfigured, siteUrl }: { googleConfigured: boolean; siteUr
               <span className="rounded-full bg-green-50 px-3 py-1 text-sm text-green-800">
                 ● Connected{data.google.email ? ` as ${data.google.email}` : ""} since {format(parseISO(data.google.connected_at), "d MMM yyyy")}
               </span>
-              <a href="/api/google/connect"><Button variant="secondary" size="sm">Reconnect</Button></a>
+              {!data.google.can_send_email && (
+                <span className="rounded-full bg-amber-50 px-3 py-1 text-sm text-amber-800">Can&apos;t send emails yet: reconnect and allow it</span>
+              )}
+              <a href="/api/google/connect"><Button variant={data.google.can_send_email ? "secondary" : "primary"} size="sm">Reconnect</Button></a>
               <Button
                 variant="danger"
                 size="sm"
@@ -165,6 +164,8 @@ function View({ googleConfigured, siteUrl }: { googleConfigured: boolean; siteUr
         </p>
       </section>
 
+      <ConfirmationEmailForm settings={data.settings} canSend={Boolean(data.google?.can_send_email)} onSaved={reload} />
+
       {editingType && (
         <EventTypeModal
           initial={editingType}
@@ -197,7 +198,11 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 }
 
 function AvailabilityForm({ settings, onSaved }: { settings: BookingSettings; onSaved: () => void }) {
-  const [form, setForm] = useState(settings);
+  const [form, setForm] = useState<BookingSettings>({
+    ...settings,
+    availability_mode: settings.availability_mode ?? "weekly",
+    repeating_hours: settings.repeating_hours ?? [],
+  });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const supported = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
@@ -209,8 +214,12 @@ function AvailabilityForm({ settings, onSaved }: { settings: BookingSettings; on
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (form.availability_mode === "repeating" && form.repeating_hours.length === 0) {
+      return alert("Add at least one start date, or switch back to weekly hours.");
+    }
     setSaving(true);
-    const { id: _id, ...patch } = form;
+    // The confirmation email has its own form; don't overwrite it with a stale copy.
+    const { id: _id, confirmation_enabled: _e, confirmation_subject: _s, confirmation_body: _b, ...patch } = form;
     const { error } = await createClient().from("booking_settings").update(patch).eq("id", 1);
     setSaving(false);
     if (error) return alert(error.message);
@@ -236,60 +245,48 @@ function AvailabilityForm({ settings, onSaved }: { settings: BookingSettings; on
         </Field>
       </div>
 
-      <div className="space-y-2">
-        <span className="label">Weekly hours</span>
-        {DAYS.map(({ key, label }) => {
-          const ranges = form.weekly_hours[key] ?? [];
-          const on = ranges.length > 0;
-          return (
-            <div key={key} className="flex flex-wrap items-center gap-3 text-sm">
-              <label className="flex w-32 items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="accent-brand"
-                  checked={on}
-                  onChange={(e) => setDay(key, e.target.checked ? [{ start: "09:00", end: "17:00" }] : [])}
-                />
-                {label}
-              </label>
-              {on ? (
-                ranges.map((r, i) => (
-                  <span key={i} className="flex items-center gap-1">
+      <div className="space-y-3">
+        <span className="label">Available hours</span>
+        <div className="inline-flex rounded-lg border border-slate-200 p-0.5 text-sm">
+          {([
+            ["weekly", "Weekly hours"],
+            ["repeating", "Repeat from a date"],
+          ] as const).map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              className={`rounded-md px-3 py-1.5 ${form.availability_mode === mode ? "bg-brand text-white" : "text-slate-600 hover:bg-slate-50"}`}
+              onClick={() => setForm({ ...form, availability_mode: mode })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {form.availability_mode === "repeating" ? (
+          <RepeatingEditor rules={form.repeating_hours} onChange={(repeating_hours) => setForm({ ...form, repeating_hours })} settings={form} />
+        ) : (
+          <div className="space-y-2">
+            {DAYS.map(({ key, label }) => {
+              const ranges = form.weekly_hours[key] ?? [];
+              const on = ranges.length > 0;
+              return (
+                <div key={key} className="flex flex-wrap items-center gap-3 text-sm">
+                  <label className="flex w-32 items-center gap-2">
                     <input
-                      type="time"
-                      className="input w-36 py-1"
-                      value={r.start}
-                      onChange={(e) => setDay(key, ranges.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))}
+                      type="checkbox"
+                      className="accent-brand"
+                      checked={on}
+                      onChange={(e) => setDay(key, e.target.checked ? [{ start: "09:00", end: "17:00" }] : [])}
                     />
-                    –
-                    <input
-                      type="time"
-                      className="input w-36 py-1"
-                      value={r.end}
-                      onChange={(e) => setDay(key, ranges.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))}
-                    />
-                    {ranges.length > 1 && (
-                      <button type="button" className="px-1 text-slate-400 hover:text-red-600" onClick={() => setDay(key, ranges.filter((_, j) => j !== i))}>
-                        ✕
-                      </button>
-                    )}
-                  </span>
-                ))
-              ) : (
-                <span className="text-slate-400">Unavailable</span>
-              )}
-              {on && (
-                <button
-                  type="button"
-                  className="text-xs text-brand-strong hover:underline"
-                  onClick={() => setDay(key, [...ranges, { start: "13:00", end: "17:00" }])}
-                >
-                  + split hours
-                </button>
-              )}
-            </div>
-          );
-        })}
+                    {label}
+                  </label>
+                  {on ? <RangesEditor ranges={ranges} onChange={(r) => setDay(key, r)} /> : <span className="text-slate-400">Unavailable</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">
@@ -320,6 +317,94 @@ function AvailabilityForm({ settings, onSaved }: { settings: BookingSettings; on
         <Button disabled={saving}>{saving ? "Saving…" : "Save availability"}</Button>
       </div>
     </form>
+  );
+}
+
+function RangesEditor({ ranges, onChange }: { ranges: TimeRange[]; onChange: (ranges: TimeRange[]) => void }) {
+  return (
+    <>
+      {ranges.map((r, i) => (
+        <span key={i} className="flex items-center gap-1">
+          <input
+            type="time"
+            className="input w-36 py-1"
+            value={r.start}
+            onChange={(e) => onChange(ranges.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))}
+          />
+          –
+          <input
+            type="time"
+            className="input w-36 py-1"
+            value={r.end}
+            onChange={(e) => onChange(ranges.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))}
+          />
+          {ranges.length > 1 && (
+            <button type="button" className="px-1 text-slate-400 hover:text-red-600" onClick={() => onChange(ranges.filter((_, j) => j !== i))}>
+              ✕
+            </button>
+          )}
+        </span>
+      ))}
+      <button type="button" className="text-xs text-brand-strong hover:underline" onClick={() => onChange([...ranges, { start: "13:00", end: "17:00" }])}>
+        + split hours
+      </button>
+    </>
+  );
+}
+
+/** Start dates that each repeat every N days, e.g. 19/10/2026, 9-5, every 8 days. */
+function RepeatingEditor({ rules, onChange, settings }: { rules: RepeatingRule[]; onChange: (rules: RepeatingRule[]) => void; settings: BookingSettings }) {
+  const today = format(new Date(), "yyyy-MM-dd");
+  const update = (i: number, patch: Partial<RepeatingRule>) => onChange(rules.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+  // The next few days with hours, so the pattern can be checked at a glance.
+  const upcoming: string[] = [];
+  for (let d = parseISO(today), n = 0; n < 90 && upcoming.length < 6; d = addDays(d, 1), n++) {
+    const date = format(d, "yyyy-MM-dd");
+    if (hoursForDate(settings, date).length) upcoming.push(format(d, "EEE d MMM"));
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-slate-500">
+        Pick a date, set your hours that day, and how often it repeats. Add more dates to build a rotating pattern, for example two days on in every 8-day cycle.
+      </p>
+      {rules.map((rule, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 p-3 text-sm">
+          <label className="flex items-center gap-2">
+            From
+            <input type="date" className="input w-40 py-1" required value={rule.start_date} onChange={(e) => update(i, { start_date: e.target.value })} />
+          </label>
+          <label className="flex items-center gap-2">
+            repeat every
+            <input
+              type="number"
+              className="input w-20 py-1"
+              min="1"
+              max="365"
+              required
+              value={rule.every_days}
+              onChange={(e) => update(i, { every_days: Number(e.target.value) })}
+            />
+            days
+          </label>
+          <RangesEditor ranges={rule.hours} onChange={(hours) => update(i, { hours })} />
+          <button type="button" className="ml-auto text-xs text-slate-400 hover:text-red-600" onClick={() => onChange(rules.filter((_, j) => j !== i))}>
+            Remove
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="text-sm text-brand-strong hover:underline"
+        onClick={() => onChange([...rules, { start_date: today, every_days: 7, hours: [{ start: "09:00", end: "17:00" }] }])}
+      >
+        + Add start date
+      </button>
+      {rules.length > 0 && (
+        <p className="text-xs text-slate-500">{upcoming.length ? `Next available: ${upcoming.join(", ")}` : "No available days in the next 90 days."}</p>
+      )}
+    </div>
   );
 }
 

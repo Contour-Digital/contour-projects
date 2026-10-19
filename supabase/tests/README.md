@@ -10,9 +10,11 @@ psql -d contour_test -v ON_ERROR_STOP=1 \
   -f supabase/migrations/0002_harden_functions.sql \
   -f supabase/migrations/0003_brand_colour.sql \
   -f supabase/migrations/0004_client_details.sql \
+  -f supabase/migrations/0006_ad_hoc_meetings.sql \
   -f supabase/migrations/0008_meeting_location_choice.sql \
   -f supabase/tests/automations_test.sql \
   -f supabase/tests/client_details_test.sql \
+  -f supabase/tests/ad_hoc_meetings_test.sql \
   -f supabase/tests/meeting_locations_test.sql
 ```
 

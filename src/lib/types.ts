@@ -93,6 +93,9 @@ export type Activity = {
 
 export type TimeRange = { start: string; end: string }; // "HH:mm"
 export type WeeklyHours = Record<"1" | "2" | "3" | "4" | "5" | "6" | "7", TimeRange[]>;
+/** Hours that apply on start_date and every `every_days` days after it. */
+export type RepeatingRule = { start_date: string; every_days: number; hours: TimeRange[] }; // start_date "yyyy-MM-dd"
+export type AvailabilityMode = "weekly" | "repeating";
 
 export type BookingSettings = {
   id: 1;
@@ -100,10 +103,15 @@ export type BookingSettings = {
   timezone: string;
   calendar_id: string;
   weekly_hours: WeeklyHours;
+  availability_mode: AvailabilityMode;
+  repeating_hours: RepeatingRule[];
   min_notice_hours: number;
   max_days_ahead: number;
   buffer_minutes: number;
   slot_interval_minutes: number;
+  confirmation_enabled: boolean;
+  confirmation_subject: string;
+  confirmation_body: string;
 };
 
 export type LocationType = "google_meet" | "phone" | "in_person" | "custom";
@@ -130,9 +138,10 @@ export type Booking = {
   event_type_id: string | null;
   client_id: string | null;
   name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   company: string | null;
+  /** Details from the booker, or the agenda for an ad hoc meeting. */
   message: string | null;
   start_at: string;
   end_at: string;
@@ -140,9 +149,17 @@ export type Booking = {
   status: "confirmed" | "cancelled";
   google_event_id: string | null;
   meet_link: string | null;
-  /** The location the booker chose, and the text shown for it. */
-  location_type: LocationType | null;
+  /** "public": booked on the booking page. "ad_hoc": added in Meetings, any time. */
+  source: "public" | "ad_hoc";
+  /** One-off title when an ad hoc meeting isn't one of the meeting types. */
+  title: string | null;
   location: string | null;
+  /** The location type the booker chose. */
+  location_type: LocationType | null;
+  invite_sent: boolean;
+  confirmation_sent_at: string | null;
+  ical_uid: string | null;
+  calendar_token: string;
   created_at: string;
 };
 

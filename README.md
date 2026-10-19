@@ -10,7 +10,8 @@ Contour Digital's own project dashboard and booking page, replacing ClickUp and 
 - **Clients**: contact details, ABN, address, hosting and maintenance subscriptions, lead source, Google Drive link and notes, linked to their projects and bookings. The Clients tab lists them by hosting subscription. Offboarding moves a client to Former clients without deleting anything.
 - **Domain logins**: for a domain managed externally, the registrar username and password are encrypted with Supabase Vault in the Sydney database. They only show when revealed on the client page, and every reveal is logged in `domain_login_log`.
 - **My tasks**: every open task across active projects, grouped by overdue / today / this week.
-- **Meetings**: everything booked through the booking page, upcoming and past.
+- **Meetings**: everything booked through the booking page, upcoming and past. Add an **ad hoc meeting** at any time, outside your booking hours, with a client (or someone new), a meeting type or a one-off name, and details. Optionally send them a Google Calendar invite and a confirmation email.
+- **Confirmation emails**: an editable template (Settings → Booking page) with placeholders like `{{first_name}}`, `{{date}}`, `{{time}}` and `{{location}}`. Sent from your connected Google account after every public booking (if switched on) and for ad hoc meetings, with Google, Outlook and Apple "Add to calendar" buttons and an `.ics` attachment.
 - **Settings**: stages and their automations, and the booking page.
 - **Booking page**: a Calendly-style page that reads your Google Calendar for busy times, adds each booking to it (with a Google Meet link) and emails the invite. Embed it on any website with two lines of HTML.
 
@@ -35,8 +36,8 @@ Create the project in the **Sydney (ap-southeast-2)** region so client data stay
 ### 2. Google Calendar
 
 1. [Google Cloud Console](https://console.cloud.google.com) → create a project (e.g. "Contour Booking").
-2. **APIs & Services → Library** → enable **Google Calendar API**.
-3. **OAuth consent screen** → External → fill in the app name and your email. Add the scopes `.../auth/calendar.events` and `.../auth/calendar.freebusy`. Then **Publish app** (set it to *In production*). In *Testing* mode Google expires the connection every 7 days. Google will show an "unverified app" warning when you connect; that's expected for a private app only you sign in to.
+2. **APIs & Services → Library** → enable **Google Calendar API** and **Gmail API** (Gmail sends the confirmation emails from your address).
+3. **OAuth consent screen** → External → fill in the app name and your email. Add the scopes `.../auth/calendar.events`, `.../auth/calendar.freebusy` and `.../auth/gmail.send`. Then **Publish app** (set it to *In production*). In *Testing* mode Google expires the connection every 7 days. Google will show an "unverified app" warning when you connect; that's expected for a private app only you sign in to.
 4. **Credentials → Create credentials → OAuth client ID** → *Web application*. Authorised redirect URI: `https://YOUR-APP-DOMAIN/api/google/callback` (and `http://localhost:3000/api/google/callback` for local dev).
 5. Note the **Client ID** and **Client secret**.
 
@@ -69,7 +70,9 @@ Create the project in the **Sydney (ap-southeast-2)** region so client data stay
 
 - **Security**: every table has row-level security. Only signed-in users whose email is in `team_members` can read or write. The public booking page never queries the database as the visitor: its API routes (`/api/availability`, `/api/book`) run on the server with the service role key and only expose open time slots. The Google refresh token lives in `google_connection`, which no signed-in user can read.
 - **Automations** are Postgres triggers (see the top of the migration), so they run the same way however a project is moved.
-- **Double bookings** are impossible: an exclusion constraint stops two confirmed bookings overlapping, and the slot is re-checked against Google right before booking.
+- **Double bookings** are impossible: an exclusion constraint stops two confirmed booking-page bookings overlapping, and the slot is re-checked against Google right before booking.
+- **Ad hoc meetings** skip the booking page rules (hours, notice, buffers). If one clashes with your calendar you're asked before it's booked. The booking page treats them as busy.
+- **Email stays with Google**: confirmation emails go through your own Gmail account, like the calendar invites, so no other email service sees client details. The `.ics` link in the email (`/api/calendar/<token>.ics`) uses a random per-meeting token.
 - **New bookers become clients**: a booking from an unknown email creates a client record; a known email is linked to the existing client.
 
 ## Development
