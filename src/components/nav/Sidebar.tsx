@@ -7,15 +7,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/brand/Logo";
 
 const NAV = [
-  { href: "/board", label: "Board", icon: "▦" },
-  { href: "/tasks", label: "My tasks", icon: "✓" },
-  { href: "/business", label: "Business & Outreach", icon: "✉" },
-  { href: "/clients", label: "Clients", icon: "◉" },
-  { href: "/bookings", label: "Bookings", icon: "◷" },
-  { href: "/settings/stages", label: "Stages & automations", icon: "⚙" },
-  { href: "/settings/booking", label: "Booking page", icon: "⌘" },
   { href: "/projects", label: "Current Projects", short: "Projects", icon: "☰" },
   { href: "/tasks", label: "My tasks", short: "Tasks", icon: "✓" },
+  { href: "/business", label: "Business & Outreach", short: "Outreach", icon: "✉" },
   { href: "/clients", label: "Clients", short: "Clients", icon: "◉" },
   { href: "/meetings", label: "Meetings", short: "Meetings", icon: "◷" },
   { href: "/settings", label: "Settings", short: "Settings", icon: "⚙" },
