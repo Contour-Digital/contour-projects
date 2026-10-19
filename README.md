@@ -7,6 +7,9 @@ Contour Digital's own project dashboard and booking page, replacing ClickUp and 
 - **Clients**: contact details, ABN, address and notes, linked to their projects and bookings.
 - **My tasks**: every open task across active projects, plus your own admin tasks, grouped by overdue / today / this week. Add admin tasks here and set them to repeat.
 - **Business & Outreach**: admin, business management and client outreach tasks (e.g. remind clients to put up a public holiday notice). Each has subtasks, a due date, an optional repeat, notes, and a list of clients to email with an *emailed* tick for each. Ticking off a repeating task creates the next one.
+- **Clients**: contact details, ABN, address, hosting and maintenance subscriptions, lead source, Google Drive link and notes, linked to their projects and bookings. The Clients tab lists them by hosting subscription. Offboarding moves a client to Former clients without deleting anything.
+- **Domain logins**: for a domain managed externally, the registrar username and password are encrypted with Supabase Vault in the Sydney database. They only show when revealed on the client page, and every reveal is logged in `domain_login_log`.
+- **My tasks**: every open task across active projects, grouped by overdue / today / this week.
 - **Booking page**: a Calendly-style page that reads your Google Calendar for busy times, adds each booking to it (with a Google Meet link) and emails the invite. Embed it on any website with two lines of HTML.
 
 Next.js (App Router) + TypeScript + Tailwind on the front end, Supabase (Postgres + Auth) behind it, hosted on Vercel. Same stack as the Wedding Planner app.

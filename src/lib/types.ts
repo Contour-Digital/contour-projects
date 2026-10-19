@@ -8,9 +8,25 @@ export type Client = {
   address: string | null;
   abn: string | null;
   notes: string | null;
+  hosting_subscription: HostingSubscription | null;
+  maintenance_subscription: boolean;
+  google_drive_url: string | null;
+  lead_source: LeadSource | null;
+  client_since: string | null;
+  preferred_contact: ContactMethod | null;
+  domain_location: DomainLocation | null;
+  domain_registrar: string | null;
+  domain_login_updated_at: string | null;
+  offboarded_at: string | null;
+  offboarding_reason: string | null;
   created_at: string;
   updated_at: string;
 };
+
+export type HostingSubscription = "standard" | "ecommerce" | "non_profit";
+export type LeadSource = "website" | "social_media" | "referral" | "outreach" | "existing_client" | "networking";
+export type ContactMethod = "email" | "phone" | "text";
+export type DomainLocation = "internal" | "external";
 
 export type Stage = {
   id: string;
