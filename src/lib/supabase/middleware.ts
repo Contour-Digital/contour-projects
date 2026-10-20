@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { twoFactorRedirect } from "@/lib/twoFactor";
 
 const PUBLIC_PREFIXES = ["/login", "/book", "/embed", "/api/availability", "/api/book", "/api/calendar", "/embed.js"];
 
@@ -20,8 +21,9 @@ function setupNeeded(missing: string[]) {
   return new NextResponse(html, { status: 503, headers: { "content-type": "text/html; charset=utf-8" } });
 }
 
-// Refreshes the Supabase session on every request and sends signed-out users
-// to /login, except on the public booking pages.
+// Refreshes the Supabase session on every request, sends signed-out users to
+// /login and users who haven't entered an authenticator code to /two-factor,
+// except on the public booking pages.
 export async function updateSession(request: NextRequest) {
   const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
   if (missing.length) return setupNeeded(missing);
@@ -53,11 +55,20 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = "";
-    return NextResponse.redirect(url);
-  }
+  if (!user) return redirectTo("/login");
+
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const next = twoFactorRedirect(path, aal?.currentLevel);
+  if (next) return redirectTo(next);
   return response;
+
+  // Carries over any refreshed session cookies so the redirect doesn't sign the user out.
+  function redirectTo(pathname: string) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname;
+    url.search = "";
+    const redirect = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
+  }
 }

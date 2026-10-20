@@ -14,11 +14,13 @@ psql -d contour_test -v ON_ERROR_STOP=1 \
   -f supabase/migrations/0008_meeting_location_choice.sql \
   -f supabase/migrations/0009_meeting_questions.sql \
   -f supabase/migrations/0010_confirmation_sender.sql \
+  -f supabase/migrations/0011_require_two_factor.sql \
   -f supabase/tests/automations_test.sql \
   -f supabase/tests/client_details_test.sql \
   -f supabase/tests/ad_hoc_meetings_test.sql \
   -f supabase/tests/meeting_locations_test.sql \
-  -f supabase/tests/meeting_questions_test.sql
+  -f supabase/tests/meeting_questions_test.sql \
+  -f supabase/tests/two_factor_test.sql
 ```
 
 It prints `ALL AUTOMATION/RLS TESTS PASSED` or stops at the first failure. CI runs it on every push.

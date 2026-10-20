@@ -5,7 +5,7 @@ reset role;
 insert into public.team_members (email) values ('team@example.com') on conflict do nothing;
 
 set role authenticated;
-select set_config('request.jwt.claims', '{"email":"team@example.com"}', false);
+select set_config('request.jwt.claims', '{"email":"team@example.com","aal":"aal2"}', false);
 
 do $$
 declare

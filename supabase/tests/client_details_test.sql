@@ -4,7 +4,7 @@ reset role;
 insert into public.team_members (email) values ('team@example.com') on conflict do nothing;
 
 set role authenticated;
-select set_config('request.jwt.claims', '{"email":"team@example.com"}', false);
+select set_config('request.jwt.claims', '{"email":"team@example.com","aal":"aal2"}', false);
 
 do $$
 declare
@@ -69,7 +69,7 @@ do $$
 declare c uuid; n int;
 begin
   select id into c from clients where name = 'Domain Co';
-  perform set_config('request.jwt.claims', '{"email":"team@example.com"}', true);
+  perform set_config('request.jwt.claims', '{"email":"team@example.com","aal":"aal2"}', true);
   perform save_domain_login(c, 'x', 'y');
   select count(*) into n from vault.secrets;
   if n <> 1 then raise exception 'expected 1 secret, got %', n; end if;
@@ -81,7 +81,7 @@ $$;
 
 -- Off the team: can't save or reveal.
 set role authenticated;
-select set_config('request.jwt.claims', '{"email":"stranger@example.com"}', false);
+select set_config('request.jwt.claims', '{"email":"stranger@example.com","aal":"aal2"}', false);
 do $$
 begin
   begin

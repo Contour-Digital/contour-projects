@@ -3,7 +3,7 @@
 insert into public.team_members (email) values ('team@example.com');
 
 set role authenticated;
-select set_config('request.jwt.claims', '{"email":"Team@Example.com"}', false);
+select set_config('request.jwt.claims', '{"email":"Team@Example.com","aal":"aal2"}', false);
 
 do $$
 declare
@@ -55,7 +55,7 @@ end;
 $$;
 
 -- Not on the team: sees nothing, can write nothing.
-select set_config('request.jwt.claims', '{"email":"stranger@example.com"}', false);
+select set_config('request.jwt.claims', '{"email":"stranger@example.com","aal":"aal2"}', false);
 do $$
 begin
   if exists (select 1 from projects) or exists (select 1 from clients) then
@@ -73,7 +73,7 @@ $$;
 reset role;
 insert into google_connection (refresh_token, email) values ('secret', 'g@example.com');
 set role authenticated;
-select set_config('request.jwt.claims', '{"email":"team@example.com"}', false);
+select set_config('request.jwt.claims', '{"email":"team@example.com","aal":"aal2"}', false);
 do $$
 begin
   if exists (select 1 from google_connection) then raise exception 'token readable'; end if;
