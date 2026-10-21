@@ -21,7 +21,8 @@ export default function LoginPage() {
     const { error } = await createClient().auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) return setError(error.message);
-    router.replace("/projects");
+    // The two-factor page asks for an authenticator code (or sets one up) before the dashboard.
+    router.replace("/two-factor");
     router.refresh();
   }
 
