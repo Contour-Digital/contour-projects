@@ -9,6 +9,7 @@ import { Logo } from "@/components/brand/Logo";
 const NAV = [
   { href: "/projects", label: "Current Projects", short: "Projects", icon: "☰" },
   { href: "/tasks", label: "My tasks", short: "Tasks", icon: "✓" },
+  { href: "/support", label: "On-Demand Support", short: "Support", icon: "✎" },
   { href: "/business", label: "Business & Outreach", short: "Outreach", icon: "✉" },
   { href: "/clients", label: "Clients", short: "Clients", icon: "◉" },
   { href: "/meetings", label: "Meetings", short: "Meetings", icon: "◷" },
