@@ -50,12 +50,14 @@ jobs:
             -f supabase/migrations/0002_harden_functions.sql \
             -f supabase/migrations/0003_brand_colour.sql \
             -f supabase/migrations/0004_client_details.sql \
+            -f supabase/migrations/0005_admin_tasks.sql \
             -f supabase/migrations/0006_ad_hoc_meetings.sql \
             -f supabase/migrations/0008_meeting_location_choice.sql \
             -f supabase/migrations/0009_meeting_questions.sql \
             -f supabase/migrations/0010_confirmation_sender.sql \
             -f supabase/migrations/0011_require_two_factor.sql \
             -f supabase/migrations/0012_support_tasks.sql \
+            -f supabase/migrations/0013_support_task_repeats.sql \
             -f supabase/tests/automations_test.sql \
             -f supabase/tests/client_details_test.sql \
             -f supabase/tests/ad_hoc_meetings_test.sql \

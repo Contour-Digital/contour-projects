@@ -1,5 +1,5 @@
--- Run after 0012_support_tasks.sql. Checks On-Demand Support tasks, their
--- subtasks, the done/invoiced stamps and that only the team can see them.
+-- Run after 0005_admin_tasks.sql, 0012_support_tasks.sql and 0013_support_task_repeats.sql. Checks On-Demand Support tasks, their
+-- subtasks, the done/invoiced stamps, repeats and that only the team can see them.
 \set ON_ERROR_STOP 1
 reset role;
 insert into public.team_members (email) values ('team@example.com') on conflict do nothing;
@@ -45,6 +45,54 @@ begin
   if exists (select 1 from support_subtasks where task_id = t) then raise exception 'subtasks left behind'; end if;
 
   insert into support_tasks (title) values ('Team only');
+end;
+$$;
+
+-- A repeating task makes the next one when ticked done, once.
+do $$
+declare
+  t uuid;
+  n uuid;
+  today date := public.local_today();
+begin
+  insert into support_tasks (title, tag, price, scheduled_date, recurrence, notes)
+    values ('Monthly maintenance', 'site_enhancements', 90, today, 'monthly', 'Check forms') returning id into t;
+  insert into support_subtasks (task_id, title, position) values (t, 'Update plugins', 1), (t, 'Test contact form', 2);
+  update support_subtasks set done = true where task_id = t;
+  update support_tasks set done = true, invoiced = true where id = t;
+
+  select id into n from support_tasks where title = 'Monthly maintenance' and not done;
+  if n is null then raise exception 'next repeat not created'; end if;
+  if (select scheduled_date from support_tasks where id = n) <> (today + interval '1 month')::date then
+    raise exception 'next repeat on the wrong date';
+  end if;
+  if (select tag <> 'site_enhancements' or price <> 90 or recurrence <> 'monthly' or notes <> 'Check forms' or invoiced
+      from support_tasks where id = n) then
+    raise exception 'next repeat details not copied';
+  end if;
+  if (select count(*) from support_subtasks where task_id = n and not done) <> 2 then
+    raise exception 'subtasks not copied fresh';
+  end if;
+  if not (select next_created from support_tasks where id = t) then raise exception 'next_created not set'; end if;
+
+  -- Unticking and re-ticking doesn't make another.
+  update support_tasks set done = false where id = t;
+  update support_tasks set done = true where id = t;
+  if (select count(*) from support_tasks where title = 'Monthly maintenance') <> 2 then
+    raise exception 'repeat created twice';
+  end if;
+
+  -- One-off tasks don't repeat.
+  insert into support_tasks (title) values ('One off') returning id into t;
+  update support_tasks set done = true where id = t;
+  if (select count(*) from support_tasks where title = 'One off') <> 1 then raise exception 'one-off repeated'; end if;
+
+  begin
+    insert into support_tasks (title, recurrence) values ('Bad', 'hourly');
+    raise exception 'bad recurrence allowed';
+  exception when check_violation then null;
+  end;
+  delete from support_tasks where title in ('Monthly maintenance', 'One off');
 end;
 $$;
 

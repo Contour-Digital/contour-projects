@@ -4,8 +4,9 @@ import { useState } from "react";
 import clsx from "clsx";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
-import type { Client, SupportTag } from "@/lib/types";
+import type { Client, Recurrence, SupportTag } from "@/lib/types";
 import { SUPPORT_TAGS, tagOf } from "@/lib/supportTasks";
+import { RECURRENCES } from "@/lib/adminTasks";
 import { Modal } from "@/components/ui/Modal";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -26,6 +27,7 @@ export function NewSupportTaskModal({
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState(defaultClientId);
   const [date, setDate] = useState(defaultDate);
+  const [recurrence, setRecurrence] = useState<Recurrence>("none");
   const [tag, setTag] = useState<SupportTag>("content_updates");
   const [price, setPrice] = useState(String(tagOf("content_updates").price));
   const [subtasks, setSubtasks] = useState<string[]>([""]);
@@ -60,6 +62,7 @@ export function NewSupportTaskModal({
         scheduled_date: date || null,
         tag,
         price: price === "" ? null : Number(price),
+        recurrence,
         notes: notes.trim() || null,
       })
       .select("id")
@@ -88,7 +91,7 @@ export function NewSupportTaskModal({
         <Field label="Task">
           <input className="input" required autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. October site maintenance" />
         </Field>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-[1fr_11rem_11rem]">
           <Field label="Client">
             <select className="input" required value={clientId} onChange={(e) => setClientId(e.target.value)}>
               <option value="">Choose a client</option>
@@ -100,7 +103,17 @@ export function NewSupportTaskModal({
           <Field label="Scheduled for">
             <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
+          <Field label="Repeat">
+            <select className="input" value={recurrence} onChange={(e) => setRecurrence(e.target.value as Recurrence)}>
+              {RECURRENCES.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </Field>
         </div>
+        {recurrence !== "none" && (
+          <p className="-mt-2 text-xs text-slate-500">When you tick this off, the next one is scheduled with the same client, tag, price and subtasks.</p>
+        )}
 
         <fieldset>
           <legend className="label">Tag</legend>

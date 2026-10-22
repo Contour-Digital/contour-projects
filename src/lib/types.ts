@@ -215,6 +215,9 @@ export type SupportTask = {
   done_at: string | null;
   invoiced: boolean;
   invoiced_at: string | null;
+  recurrence: Recurrence;
+  /** Set once the next repeat has been created. */
+  next_created: boolean;
   created_at: string;
   updated_at: string;
 };

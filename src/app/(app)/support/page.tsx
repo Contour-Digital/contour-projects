@@ -10,6 +10,7 @@ import { must, useData } from "@/lib/useData";
 import type { Client, SupportSubtask, SupportTag, SupportTask } from "@/lib/types";
 import { SUPPORT_TAGS, groupByScheduledDate } from "@/lib/supportTasks";
 import { formatMoney } from "@/lib/format";
+import { recurrenceLabel } from "@/lib/adminTasks";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { TagBadge } from "@/components/support/TagBadge";
@@ -149,6 +150,7 @@ export default function SupportPage() {
                         <div className="text-xs text-slate-500">
                           {[
                             clientName(client),
+                            t.recurrence !== "none" && `↻ ${recurrenceLabel(t.recurrence)}`,
                             subs.length > 0 && `${subs.filter((s) => s.done).length}/${subs.length} subtasks`,
                             g.key === "overdue" && t.scheduled_date && `was ${format(parseISO(t.scheduled_date), "d MMM")}`,
                           ]

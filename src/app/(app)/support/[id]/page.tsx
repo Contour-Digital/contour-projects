@@ -6,8 +6,9 @@ import { useState } from "react";
 import clsx from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
-import type { Client, SupportSubtask, SupportTag, SupportTask } from "@/lib/types";
+import type { Client, Recurrence, SupportSubtask, SupportTag, SupportTask } from "@/lib/types";
 import { SUPPORT_TAGS, tagOf } from "@/lib/supportTasks";
+import { RECURRENCES, recurrenceLabel } from "@/lib/adminTasks";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -102,15 +103,16 @@ export default function SupportTaskPage() {
             <TagBadge tag={task.tag} />
             <span>
               {task.done
-                ? `Done ${task.done_at ? formatDate(task.done_at.slice(0, 10)) : ""}`
+                ? `Done ${task.done_at ? formatDate(task.done_at.slice(0, 10)) : ""}${task.next_created ? " · the next one has been scheduled" : ""}`
                 : task.scheduled_date
                   ? `Scheduled for ${formatDate(task.scheduled_date)}`
                   : "Not scheduled"}
             </span>
+            {task.recurrence !== "none" && <span>↻ {recurrenceLabel(task.recurrence)}</span>}
           </div>
         </div>
         <Button variant={task.done ? "secondary" : "primary"} onClick={() => updateTask({ done: !task.done })}>
-          {task.done ? "Reopen" : "Mark done"}
+          {task.done ? "Reopen" : task.recurrence !== "none" && !task.next_created ? "Mark done and schedule next" : "Mark done"}
         </Button>
       </div>
 
@@ -171,6 +173,13 @@ export default function SupportTaskPage() {
             </Field>
             <Field label="Scheduled for">
               <input className="input" type="date" value={task.scheduled_date ?? ""} onChange={(e) => updateTask({ scheduled_date: e.target.value || null })} />
+            </Field>
+            <Field label="Repeat" hint={task.recurrence !== "none" ? "When you tick this off, the next one is scheduled with the same client, tag, price and subtasks." : undefined}>
+              <select className="input" value={task.recurrence} onChange={(e) => updateTask({ recurrence: e.target.value as Recurrence })}>
+                {RECURRENCES.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
             </Field>
             <Field label="Tag" hint={`${tagOf(task.tag).description} · ${tagOf(task.tag).priceLabel}`}>
               <select className="input" value={task.tag} onChange={(e) => changeTag(e.target.value as SupportTag)}>
