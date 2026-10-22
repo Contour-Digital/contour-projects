@@ -5,26 +5,29 @@ import { useState } from "react";
 import { addDays, format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
-import type { AdminTask, Project, Stage, Task } from "@/lib/types";
+import type { AdminTask, Client, Project, Stage, SupportSubtask, SupportTask, Task } from "@/lib/types";
 import { recurrenceLabel } from "@/lib/adminTasks";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { StageBadge } from "@/components/ui/StageBadge";
 import { AreaBadge } from "@/components/admin/AreaBadge";
+import { TagBadge } from "@/components/support/TagBadge";
 import { NewAdminTaskModal } from "@/components/admin/NewAdminTaskModal";
 
 type AdminRow = AdminTask & { subtasks: { done: boolean }[] };
+type SupportRow = SupportTask & { client: Pick<Client, "name" | "company"> | null; subtasks: Pick<SupportSubtask, "done">[] };
 type Row = Task & { project: Pick<Project, "id" | "name" | "stage_id" | "archived"> & { client: { name: string; company: string | null } | null } };
 
 async function load() {
   const supabase = createClient();
-  const [tasks, stages, adminTasks] = await Promise.all([
+  const [tasks, stages, adminTasks, supportTasks] = await Promise.all([
     supabase
       .from("tasks")
       .select("*, project:projects!inner(id,name,stage_id,archived, client:clients(name,company))")
       .eq("done", false)
       .eq("project.archived", false)
-      .order("due_date", { nullsFirst: false })
+      .not("due_date", "is", null)
+      .order("due_date")
       .then(must),
     supabase.from("stages").select("*").order("position").then(must),
     supabase
@@ -32,7 +35,15 @@ async function load() {
       .select("*")
       .is("parent_id", null)
       .eq("done", false)
-      .order("due_date", { nullsFirst: false })
+      .not("due_date", "is", null)
+      .order("due_date")
+      .then(must),
+    supabase
+      .from("support_tasks")
+      .select("*, client:clients(name,company), subtasks:support_subtasks(done)")
+      .eq("done", false)
+      .not("scheduled_date", "is", null)
+      .order("scheduled_date")
       .then(must),
   ]);
   const open = adminTasks as AdminTask[];
@@ -40,7 +51,7 @@ async function load() {
     ? ((await supabase.from("admin_tasks").select("parent_id, done").in("parent_id", open.map((t) => t.id)).then(must)) as Pick<AdminTask, "parent_id" | "done">[])
     : [];
   const withSubtasks: AdminRow[] = open.map((t) => ({ ...t, subtasks: subtasks.filter((s) => s.parent_id === t.id) }));
-  return { tasks: tasks as Row[], stages: stages as Stage[], adminTasks: withSubtasks };
+  return { tasks: tasks as Row[], stages: stages as Stage[], adminTasks: withSubtasks, supportTasks: supportTasks as SupportRow[] };
 }
 
 export default function TasksPage() {
@@ -58,13 +69,13 @@ export default function TasksPage() {
   const items = [
     ...visible.map((t) => ({ kind: "project" as const, id: t.id, due: t.due_date, task: t })),
     ...data.adminTasks.map((t) => ({ kind: "admin" as const, id: t.id, due: t.due_date, task: t })),
-  ].sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999"));
+    ...data.supportTasks.map((t) => ({ kind: "support" as const, id: t.id, due: t.scheduled_date, task: t })),
+  ].sort((a, b) => (a.due ?? "").localeCompare(b.due ?? ""));
   const groups = [
     { title: "Overdue", tone: "text-red-600", rows: items.filter((t) => t.due && t.due < today) },
     { title: "Today", tone: "text-amber-600", rows: items.filter((t) => t.due === today) },
     { title: "Next 7 days", tone: "text-slate-700", rows: items.filter((t) => t.due && t.due > today && t.due <= weekEnd) },
     { title: "Later", tone: "text-slate-700", rows: items.filter((t) => t.due && t.due > weekEnd) },
-    { title: "No due date", tone: "text-slate-500", rows: items.filter((t) => !t.due) },
   ];
 
   async function complete(task: Row) {
@@ -80,11 +91,18 @@ export default function TasksPage() {
     if (task.recurrence !== "none") reload();
   }
 
+  async function completeSupport(task: SupportRow) {
+    setData({ ...data!, supportTasks: data!.supportTasks.filter((t) => t.id !== task.id) });
+    const { error } = await createClient().from("support_tasks").update({ done: true }).eq("id", task.id);
+    if (error) alert(error.message);
+    if (task.recurrence !== "none") reload();
+  }
+
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader
         title="Tasks"
-        subtitle={`${visible.length} open project tasks · ${data.adminTasks.length} admin tasks`}
+        subtitle={`Scheduled work: ${visible.length} project tasks · ${data.adminTasks.length} admin tasks · ${data.supportTasks.length} support tasks`}
         actions={
           <>
             <label className="flex items-center gap-1.5 text-sm text-slate-600">
@@ -114,7 +132,7 @@ export default function TasksPage() {
                     <StageBadge stage={data.stages.find((s) => s.id === item.task.stage_id)} />
                     {item.due && <span className="w-16 text-right text-xs text-slate-500">{format(parseISO(item.due), "d MMM")}</span>}
                   </li>
-                ) : (
+                ) : item.kind === "admin" ? (
                   <li key={item.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
                     <input type="checkbox" className="h-4 w-4 accent-brand" onChange={() => completeAdmin(item.task)} aria-label={`Complete ${item.task.title}`} />
                     <div className="min-w-0 flex-1">
@@ -130,6 +148,25 @@ export default function TasksPage() {
                       </div>
                     </div>
                     <span className="hidden sm:block"><AreaBadge area={item.task.area} /></span>
+                    {item.due && <span className="w-16 text-right text-xs text-slate-500">{format(parseISO(item.due), "d MMM")}</span>}
+                  </li>
+                ) : (
+                  <li key={item.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                    <input type="checkbox" className="h-4 w-4 accent-brand" onChange={() => completeSupport(item.task)} aria-label={`Complete ${item.task.title}`} />
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/support/${item.id}`} className="hover:underline">{item.task.title}</Link>
+                      <div className="text-xs text-slate-500">
+                        {[
+                          item.task.client ? item.task.client.company || item.task.client.name : "On-Demand Support",
+                          item.task.recurrence !== "none" && `↻ ${recurrenceLabel(item.task.recurrence)}`,
+                          item.task.subtasks.length > 0 &&
+                            `${item.task.subtasks.filter((s) => s.done).length}/${item.task.subtasks.length} subtasks`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
+                    </div>
+                    <span className="hidden sm:block"><TagBadge tag={item.task.tag} /></span>
                     {item.due && <span className="w-16 text-right text-xs text-slate-500">{format(parseISO(item.due), "d MMM")}</span>}
                   </li>
                 )
