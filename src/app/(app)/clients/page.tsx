@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
-import type { Client, HostingSubscription, Stage } from "@/lib/types";
+import type { Client, Stage } from "@/lib/types";
 import { HOSTING_LABELS, byClientName } from "@/lib/clients";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -18,11 +18,6 @@ import { saveClient } from "@/components/clients/saveClient";
 type Row = Client & { projects: { id: string; name: string; stage_id: string; archived: boolean }[] };
 
 type MaintenanceFilter = "all" | "yes" | "no";
-
-const GROUPS: { key: HostingSubscription | "none"; title: string }[] = [
-  ...(Object.entries(HOSTING_LABELS) as [HostingSubscription, string][]).map(([key, label]) => ({ key, title: `${label} hosting` })),
-  { key: "none", title: "No hosting subscription" },
-];
 
 async function load() {
   const supabase = createClient();
@@ -59,7 +54,7 @@ export default function ClientsPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Clients"
-        subtitle={`${data.clients.filter((c) => !c.offboarded_at).length} current clients`}
+        subtitle={`${data.clients.filter((c) => !c.offboarded_at).length} current clients · ${data.clients.filter((c) => !c.offboarded_at && c.maintenance_subscription).length} on maintenance`}
         actions={
           <>
             <input className="input w-56" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -78,12 +73,11 @@ export default function ClientsPage() {
         }
       />
       <div className="space-y-6">
-        {GROUPS.map((g) => {
-          const groupRows = current.filter((c) => (c.hosting_subscription ?? "none") === g.key);
-          if (groupRows.length === 0 && g.key === "none") return null;
-          return <ClientGroup key={g.key} title={g.title} rows={groupRows} stages={data.stages} />;
-        })}
-        {current.length === 0 && <p className="card px-4 py-8 text-center text-sm text-slate-500">No clients match.</p>}
+        {current.length > 0 ? (
+          <ClientGroup rows={current} stages={data.stages} />
+        ) : (
+          <p className="card px-4 py-8 text-center text-sm text-slate-500">No clients match.</p>
+        )}
 
         {former.length > 0 && (
           <div>
@@ -117,25 +111,17 @@ export default function ClientsPage() {
   );
 }
 
-function ClientGroup({ title, rows, stages, former }: { title?: string; rows: Row[]; stages: Stage[]; former?: boolean }) {
+function ClientGroup({ rows, stages, former }: { rows: Row[]; stages: Stage[]; former?: boolean }) {
   const router = useRouter();
-  const onMaintenance = rows.filter((c) => c.maintenance_subscription).length;
   return (
     <section>
-      {title && (
-        <h2 className="mb-2 flex items-baseline gap-2 text-sm font-semibold">
-          {title}
-          <span className="text-xs font-normal text-slate-500">
-            {rows.length} client{rows.length === 1 ? "" : "s"} · {onMaintenance} on maintenance
-          </span>
-        </h2>
-      )}
       <div className="card overflow-hidden">
         <table className="w-full table-fixed text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-2.5 font-medium">Client</th>
               <th className="hidden px-4 py-2.5 font-medium md:table-cell">Contact</th>
+              <th className="hidden w-32 px-4 py-2.5 font-medium sm:table-cell">Hosting</th>
               <th className="w-32 px-4 py-2.5 font-medium">{former ? "Left" : "Maintenance"}</th>
               <th className="hidden w-48 px-4 py-2.5 font-medium sm:table-cell">Projects</th>
             </tr>
@@ -152,6 +138,9 @@ function ClientGroup({ title, rows, stages, former }: { title?: string; rows: Ro
                 <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
                   <div className="truncate">{c.email}</div>
                   <div className="text-xs text-slate-500">{c.phone}</div>
+                </td>
+                <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">
+                  {c.hosting_subscription ? HOSTING_LABELS[c.hosting_subscription] : <span className="text-xs text-slate-400">None</span>}
                 </td>
                 <td className="px-4 py-3">
                   {former ? (
@@ -175,7 +164,7 @@ function ClientGroup({ title, rows, stages, former }: { title?: string; rows: Ro
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-500">No clients here yet.</td>
+                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">No clients here yet.</td>
               </tr>
             )}
           </tbody>
