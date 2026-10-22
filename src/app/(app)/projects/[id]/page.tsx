@@ -171,9 +171,23 @@ export default function ProjectPage() {
                       <span className="text-xs text-slate-400">{done}/{g.tasks.length}</span>
                     </div>
                     <ul className="divide-y divide-slate-100 rounded-lg border border-slate-100">
-                      {g.tasks.map((t) => (
+                      {g.tasks.filter((t) => !t.done).map((t) => (
                         <TaskRow key={t.id} task={t} onToggle={() => toggleTask(t)} onUpdate={(p) => updateTask(t.id, p)} onDelete={() => deleteTask(t.id)} />
                       ))}
+                      {done > 0 && (
+                        <li>
+                          <details>
+                            <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-slate-500 hover:text-slate-700">
+                              Completed tasks ({done})
+                            </summary>
+                            <ul className="divide-y divide-slate-100 border-t border-slate-100">
+                              {g.tasks.filter((t) => t.done).map((t) => (
+                                <TaskRow key={t.id} task={t} onToggle={() => toggleTask(t)} onUpdate={(p) => updateTask(t.id, p)} onDelete={() => deleteTask(t.id)} />
+                              ))}
+                            </ul>
+                          </details>
+                        </li>
+                      )}
                       {isCurrent && (
                         <li className="p-2">
                           <form onSubmit={addTask} className="flex gap-2">
