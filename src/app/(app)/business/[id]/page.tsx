@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
 import type { AdminArea, AdminTask, AdminTaskClient, Client, Recurrence } from "@/lib/types";
+import { byClientName } from "@/lib/clients";
 import { AREAS, RECURRENCES } from "@/lib/adminTasks";
 import { dueLabel, formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
@@ -45,7 +46,7 @@ export default function AdminTaskPage() {
   const supabase = createClient();
   const listed = new Set(recipients.map((r) => r.client_id));
   // Offboarded clients aren't offered, but stay on lists they were already on.
-  const unlisted = clients.filter((c) => !listed.has(c.id) && !c.offboarded_at);
+  const unlisted = clients.filter((c) => !listed.has(c.id) && !c.offboarded_at).sort(byClientName);
 
   async function updateTask(patch: Partial<AdminTask>) {
     setData({ ...data!, task: { ...task, ...patch } });

@@ -11,6 +11,7 @@ import type { Client, SupportSubtask, SupportTag, SupportTask } from "@/lib/type
 import { SUPPORT_TAGS, groupByScheduledDate } from "@/lib/supportTasks";
 import { formatMoney } from "@/lib/format";
 import { recurrenceLabel } from "@/lib/adminTasks";
+import { byClientName } from "@/lib/clients";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { TagBadge } from "@/components/support/TagBadge";
@@ -62,7 +63,7 @@ export default function SupportPage() {
   const groups = groupByScheduledDate(rows, { today, completed: showDone });
   const total = (list: Pick<SupportTask, "price">[]) => list.reduce((sum, t) => sum + Number(t.price ?? 0), 0);
   // Clients with tasks in this list, so the filter stays short.
-  const listedClients = data.clients.filter((c) => data.tasks.some((t) => t.client_id === c.id));
+  const listedClients = data.clients.filter((c) => data.tasks.some((t) => t.client_id === c.id)).sort(byClientName);
 
   async function update(task: SupportTask, patch: Partial<SupportTask>) {
     // Ticking done moves a task to the other list.

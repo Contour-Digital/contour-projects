@@ -8,6 +8,7 @@ import { format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
 import type { Activity, Client, Project, ProjectNote, Stage, Task } from "@/lib/types";
+import { byClientName } from "@/lib/clients";
 import { daysSince, dueLabel, formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -245,7 +246,7 @@ export default function ProjectPage() {
                 aria-label="Change client"
               >
                 <option value="">No client</option>
-                {data.clients.map((c) => (
+                {[...data.clients].sort(byClientName).map((c) => (
                   <option key={c.id} value={c.id}>{c.company || c.name}</option>
                 ))}
               </select>

@@ -9,6 +9,7 @@ import { must, useData } from "@/lib/useData";
 import type { Client, Recurrence, SupportSubtask, SupportTag, SupportTask } from "@/lib/types";
 import { SUPPORT_TAGS, tagOf } from "@/lib/supportTasks";
 import { RECURRENCES, recurrenceLabel } from "@/lib/adminTasks";
+import { byClientName } from "@/lib/clients";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -41,7 +42,7 @@ export default function SupportTaskPage() {
   const supabase = createClient();
   const client = clients.find((c) => c.id === task.client_id);
   // Offboarded clients aren't offered, unless this task is already theirs.
-  const clientOptions = clients.filter((c) => !c.offboarded_at || c.id === task.client_id);
+  const clientOptions = clients.filter((c) => !c.offboarded_at || c.id === task.client_id).sort(byClientName);
 
   async function updateTask(patch: Partial<SupportTask>) {
     setData({ ...data!, task: { ...task, ...patch } });
