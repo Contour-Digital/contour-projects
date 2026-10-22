@@ -200,3 +200,30 @@ export type AdminTaskClient = {
   note: string | null;
   created_at: string;
 };
+
+export type SupportTag = "content_updates" | "site_enhancements" | "advanced_customization" | "notification_banner";
+
+export type SupportTask = {
+  id: string;
+  client_id: string | null;
+  title: string;
+  tag: SupportTag;
+  price: number | null;
+  scheduled_date: string | null;
+  notes: string | null;
+  done: boolean;
+  done_at: string | null;
+  invoiced: boolean;
+  invoiced_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SupportSubtask = {
+  id: string;
+  task_id: string;
+  title: string;
+  done: boolean;
+  position: number;
+  created_at: string;
+};

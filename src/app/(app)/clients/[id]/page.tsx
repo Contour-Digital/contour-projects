@@ -6,10 +6,11 @@ import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
-import type { Booking, Client, Project, Stage } from "@/lib/types";
-import { formatMoney } from "@/lib/format";
+import type { Booking, Client, Project, Stage, SupportTask } from "@/lib/types";
+import { formatDate, formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { StageBadge } from "@/components/ui/StageBadge";
+import { TagBadge } from "@/components/support/TagBadge";
 import { ClientCard } from "@/components/clients/ClientCard";
 import { ClientForm } from "@/components/clients/ClientForm";
 import { OffboardModal } from "@/components/clients/OffboardModal";
@@ -18,12 +19,13 @@ import { NewProjectModal } from "@/components/projects/NewProjectModal";
 
 async function load(id: string) {
   const supabase = createClient();
-  const [client, projects, stages, bookings, clients] = await Promise.all([
+  const [client, projects, stages, bookings, clients, support] = await Promise.all([
     supabase.from("clients").select("*").eq("id", id).single().then(must),
     supabase.from("projects").select("*").eq("client_id", id).order("created_at", { ascending: false }).then(must),
     supabase.from("stages").select("*").order("position").then(must),
     supabase.from("bookings").select("*").eq("client_id", id).order("start_at", { ascending: false }).then(must),
     supabase.from("clients").select("id,name,company").order("name").then(must),
+    supabase.from("support_tasks").select("*").eq("client_id", id).order("scheduled_date", { ascending: false, nullsFirst: true }).limit(20).then(must),
   ]);
   return {
     client: client as Client,
@@ -31,6 +33,7 @@ async function load(id: string) {
     stages: stages as Stage[],
     bookings: bookings as Booking[],
     clients: clients as Pick<Client, "id" | "name" | "company">[],
+    support: support as SupportTask[],
   };
 }
 
@@ -130,6 +133,32 @@ export default function ClientPage() {
                     <span className="flex items-center gap-3 text-sm text-slate-500">
                       {formatMoney(p.value)}
                       <StageBadge stage={data.stages.find((s) => s.id === p.stage_id)} />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="card p-5">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="font-semibold">On-Demand Support</h2>
+              <Link href="/support" className="text-sm text-slate-500 hover:underline">All support work</Link>
+            </div>
+            {data.support.length === 0 && <p className="text-sm text-slate-500">No support tasks.</p>}
+            <ul className="divide-y divide-slate-100">
+              {data.support.map((t) => (
+                <li key={t.id}>
+                  <Link href={`/support/${t.id}`} className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-brand-strong">
+                    <span className={t.done ? "text-slate-500" : "font-medium"}>
+                      {t.title}
+                      <span className="ml-2 text-xs font-normal text-slate-400">
+                        {t.done ? "done" : t.scheduled_date ? formatDate(t.scheduled_date) : "not scheduled"}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-3 text-slate-500">
+                      {t.price != null && formatMoney(Number(t.price))}
+                      <TagBadge tag={t.tag} />
                     </span>
                   </Link>
                 </li>

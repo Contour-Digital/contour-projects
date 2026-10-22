@@ -55,15 +55,18 @@ jobs:
             -f supabase/migrations/0009_meeting_questions.sql \
             -f supabase/migrations/0010_confirmation_sender.sql \
             -f supabase/migrations/0011_require_two_factor.sql \
+            -f supabase/migrations/0012_support_tasks.sql \
             -f supabase/tests/automations_test.sql \
             -f supabase/tests/client_details_test.sql \
             -f supabase/tests/ad_hoc_meetings_test.sql \
             -f supabase/tests/meeting_locations_test.sql \
             -f supabase/tests/meeting_questions_test.sql \
-            -f supabase/tests/two_factor_test.sql | tee out.txt
+            -f supabase/tests/two_factor_test.sql \
+            -f supabase/tests/support_tasks_test.sql | tee out.txt
           grep -q "ALL AUTOMATION/RLS TESTS PASSED" out.txt
           grep -q "ALL CLIENT DETAILS TESTS PASSED" out.txt
           grep -q "ALL AD HOC MEETING TESTS PASSED" out.txt
           grep -q "ALL MEETING LOCATION TESTS PASSED" out.txt
           grep -q "ALL MEETING QUESTION TESTS PASSED" out.txt
           grep -q "ALL TWO FACTOR TESTS PASSED" out.txt
+          grep -q "ALL SUPPORT TASK TESTS PASSED" out.txt
