@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Client, Stage } from "@/lib/types";
+import { byClientName } from "@/lib/clients";
 import { Modal } from "@/components/ui/Modal";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -100,7 +101,7 @@ export function NewProjectModal({
         <Field label="Client">
           <select className="input" value={clientId} onChange={(e) => setClientId(e.target.value)}>
             <option value="">No client</option>
-            {clients.map((c) => (
+            {[...clients].sort(byClientName).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.company ? `${c.company} (${c.name})` : c.name}
               </option>

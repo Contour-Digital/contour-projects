@@ -30,3 +30,8 @@ export const DOMAIN_LABELS: Record<DomainLocation, string> = {
 export function toUrl(value: string) {
   return value.startsWith("http") ? value : `https://${value}`;
 }
+
+/** A to Z by the name a client is shown under: the business name, or the person's name if there isn't one. */
+export function byClientName(a: { name: string; company: string | null }, b: { name: string; company: string | null }) {
+  return (a.company || a.name).localeCompare(b.company || b.name, "en", { sensitivity: "base", numeric: true });
+}

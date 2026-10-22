@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Client, Recurrence, SupportTag } from "@/lib/types";
 import { SUPPORT_TAGS, tagOf } from "@/lib/supportTasks";
 import { RECURRENCES } from "@/lib/adminTasks";
+import { byClientName } from "@/lib/clients";
 import { Modal } from "@/components/ui/Modal";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -35,7 +36,7 @@ export function NewSupportTaskModal({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const active = clients.filter((c) => !c.offboarded_at);
+  const active = clients.filter((c) => !c.offboarded_at).sort(byClientName);
 
   function pickTag(t: SupportTag) {
     setTag(t);

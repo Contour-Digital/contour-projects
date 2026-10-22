@@ -7,7 +7,7 @@ import { format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
 import type { Client, HostingSubscription, Stage } from "@/lib/types";
-import { HOSTING_LABELS } from "@/lib/clients";
+import { HOSTING_LABELS, byClientName } from "@/lib/clients";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -23,11 +23,6 @@ const GROUPS: { key: HostingSubscription | "none"; title: string }[] = [
   ...(Object.entries(HOSTING_LABELS) as [HostingSubscription, string][]).map(([key, label]) => ({ key, title: `${label} hosting` })),
   { key: "none", title: "No hosting subscription" },
 ];
-
-/** Maintenance clients first, then by name. */
-const byMaintenanceThenName = (a: Row, b: Row) =>
-  Number(b.maintenance_subscription) - Number(a.maintenance_subscription) ||
-  (a.company || a.name).localeCompare(b.company || b.name);
 
 async function load() {
   const supabase = createClient();
@@ -51,7 +46,7 @@ export default function ClientsPage() {
     return (data?.clients ?? [])
       .filter((c) => !q || [c.name, c.company, c.email, c.phone].some((v) => v?.toLowerCase().includes(q)))
       .filter((c) => maintenance === "all" || c.maintenance_subscription === (maintenance === "yes"))
-      .sort(byMaintenanceThenName);
+      .sort(byClientName);
   }, [data, search, maintenance]);
 
   const current = rows.filter((c) => !c.offboarded_at);
