@@ -78,13 +78,14 @@ export default function CurrentProjectsPage() {
       .sort((a, b) => (stageOrder.get(a.stage_id) ?? 0) - (stageOrder.get(b.stage_id) ?? 0) || a.position - b.position);
   }, [data, search, stageFilter, hideClosed]);
 
-  // One group per stage heading, skipping stages with nothing to show.
+  // One group per stage heading, kept even when empty so the whole pipeline stays visible.
+  // Only the stage filter and "Hide completed" remove a heading.
   const groups = useMemo(
     () =>
       (data?.stages ?? [])
-        .map((stage) => ({ stage, projects: rows.filter((p) => p.stage_id === stage.id) }))
-        .filter((g) => g.projects.length > 0),
-    [data?.stages, rows]
+        .filter((stage) => (!stageFilter || stage.id === stageFilter) && !(hideClosed && stage.is_closed))
+        .map((stage) => ({ stage, projects: rows.filter((p) => p.stage_id === stage.id) })),
+    [data?.stages, rows, stageFilter, hideClosed]
   );
 
   if (error) return <p className="text-red-600">Couldn&apos;t load projects: {error}</p>;
@@ -144,15 +145,17 @@ export default function CurrentProjectsPage() {
               {stage.name}
               <span className="font-normal text-slate-400">{projects.length}</span>
             </summary>
-            <div className="hidden grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_7rem_6rem_4rem] gap-4 border-y border-slate-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-500 md:grid">
-              <span>Business</span>
-              <span>Stage</span>
-              <span>Stage tasks</span>
-              <span>Due</span>
-              <span className="text-right">Value</span>
-              <span className="text-right" title="Days in this stage">Days</span>
-            </div>
-            <ul className="divide-y divide-slate-100 border-t border-slate-200 md:border-t-0">
+            {projects.length > 0 && (
+              <div className="hidden grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_7rem_6rem_4rem] gap-4 border-y border-slate-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-500 md:grid">
+                <span>Business</span>
+                <span>Stage</span>
+                <span>Stage tasks</span>
+                <span>Due</span>
+                <span className="text-right">Value</span>
+                <span className="text-right" title="Days in this stage">Days</span>
+              </div>
+            )}
+            <ul className={clsx("divide-y divide-slate-100 border-t border-slate-200", projects.length > 0 && "md:border-t-0")}>
               {projects.map((p) => {
                 const tasks = tasksByProject.get(p.id) ?? [];
                 const stageTasks = tasks.filter((t) => t.stage_id === p.stage_id);
@@ -223,10 +226,10 @@ export default function CurrentProjectsPage() {
                   </li>
                 );
               })}
+              {projects.length === 0 && <li className="px-4 py-3 text-sm text-slate-400">No projects in this stage.</li>}
             </ul>
           </details>
         ))}
-        {groups.length === 0 && <p className="card p-8 text-center text-sm text-slate-500">No projects match.</p>}
       </div>
 
       {creating && (
