@@ -139,6 +139,24 @@ function StageCard({
     reload();
   }
 
+  // Renumber the whole list so a stage with duplicate positions still moves cleanly,
+  // and carry the new order onto tasks already on projects.
+  async function moveTemplate(from: number, to: number) {
+    const order = [...templates];
+    const [moved] = order.splice(from, 1);
+    order.splice(to, 0, moved);
+    const changed = order.map((t, position) => ({ t, position })).filter(({ t, position }) => t.position !== position);
+    const results = await Promise.all(
+      changed.flatMap(({ t, position }) => [
+        supabase.from("stage_task_templates").update({ position }).eq("id", t.id),
+        supabase.from("tasks").update({ position }).eq("template_id", t.id),
+      ])
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) alert(failed.error.message);
+    reload();
+  }
+
   // New checklist items only apply to projects entering the stage from now on;
   // this pushes one onto projects that are already there.
   async function applyToExisting(t: StageTaskTemplate) {
@@ -189,8 +207,26 @@ function StageCard({
           </div>
 
           <ul className="divide-y divide-slate-100 rounded-lg border border-slate-100">
-            {templates.map((t) => (
+            {templates.map((t, i) => (
               <li key={t.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <div className="flex flex-col text-[10px]">
+                  <button
+                    className="leading-none text-slate-400 hover:text-slate-700 disabled:opacity-30"
+                    aria-label="Move task up"
+                    disabled={i === 0}
+                    onClick={() => moveTemplate(i, i - 1)}
+                  >
+                    ▲
+                  </button>
+                  <button
+                    className="leading-none text-slate-400 hover:text-slate-700 disabled:opacity-30"
+                    aria-label="Move task down"
+                    disabled={i === templates.length - 1}
+                    onClick={() => moveTemplate(i, i + 1)}
+                  >
+                    ▼
+                  </button>
+                </div>
                 <span className="flex-1">{t.title}</span>
                 <StatusSetting
                   value={t.sets_status}
