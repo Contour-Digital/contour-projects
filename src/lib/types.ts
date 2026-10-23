@@ -30,6 +30,9 @@ export type LeadSource = "website" | "social_media" | "referral" | "outreach" | 
 export type ContactMethod = "email" | "phone" | "text";
 export type DomainLocation = "internal" | "external";
 
+/** Project and support task status (see src/lib/status.ts). */
+export type WorkStatus = "underway" | "waiting_on_client" | "on_hold" | "completed";
+
 export type Stage = {
   id: string;
   name: string;
@@ -45,6 +48,8 @@ export type StageTaskTemplate = {
   title: string;
   description: string | null;
   due_offset_days: number | null;
+  /** Ticking this item off sets the project's status to this. */
+  sets_status: WorkStatus | null;
   position: number;
 };
 
@@ -59,6 +64,7 @@ export type Project = {
   start_date: string | null;
   due_date: string | null;
   stage_entered_at: string;
+  status: WorkStatus;
   archived: boolean;
   created_at: string;
   updated_at: string;
@@ -215,6 +221,7 @@ export type SupportTask = {
   done_at: string | null;
   invoiced: boolean;
   invoiced_at: string | null;
+  status: WorkStatus;
   recurrence: Recurrence;
   /** Set once the next repeat has been created. */
   next_created: boolean;

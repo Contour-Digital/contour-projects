@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
-import type { Stage, StageTaskTemplate } from "@/lib/types";
+import type { Stage, StageTaskTemplate, WorkStatus } from "@/lib/types";
+import { PICKABLE_STATUSES, statusOf } from "@/lib/status";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 
@@ -44,7 +45,7 @@ export default function StagesSettingsPage() {
     <div className="mx-auto max-w-4xl">
       <PageHeader
         title="Stages & automations"
-        subtitle="Each stage has a task checklist. When a project enters a stage, its checklist is added to the project automatically."
+        subtitle="Each stage has a task checklist. When a project enters a stage, its checklist is added to the project automatically. A checklist item can also change the project's status when it's ticked off. Projects entering a finished stage are marked Completed."
       />
 
       <div className="space-y-4">
@@ -111,6 +112,7 @@ function StageCard({
   const [name, setName] = useState(stage.name);
   const [title, setTitle] = useState("");
   const [offset, setOffset] = useState("");
+  const [setsStatus, setSetsStatus] = useState<WorkStatus | "">("");
   const [lastAdded, setLastAdded] = useState<StageTaskTemplate | null>(null);
   const supabase = createClient();
 
@@ -120,12 +122,19 @@ function StageCard({
     const position = Math.max(-1, ...templates.map((t) => t.position)) + 1;
     const { data, error } = await supabase
       .from("stage_task_templates")
-      .insert({ stage_id: stage.id, title: title.trim(), due_offset_days: offset === "" ? null : Number(offset), position })
+      .insert({
+        stage_id: stage.id,
+        title: title.trim(),
+        due_offset_days: offset === "" ? null : Number(offset),
+        sets_status: setsStatus || null,
+        position,
+      })
       .select("*")
       .single();
     if (error) return alert(error.message);
     setTitle("");
     setOffset("");
+    setSetsStatus("");
     setLastAdded(data as StageTaskTemplate);
     reload();
   }
@@ -183,6 +192,14 @@ function StageCard({
             {templates.map((t) => (
               <li key={t.id} className="flex items-center gap-3 px-3 py-2 text-sm">
                 <span className="flex-1">{t.title}</span>
+                <StatusSetting
+                  value={t.sets_status}
+                  onChange={async (sets_status) => {
+                    const { error } = await supabase.from("stage_task_templates").update({ sets_status }).eq("id", t.id);
+                    if (error) alert(error.message);
+                    reload();
+                  }}
+                />
                 <span className="text-xs text-slate-500">
                   {t.due_offset_days == null ? "no due date" : `due ${t.due_offset_days === 0 ? "same day" : `+${t.due_offset_days}d`}`}
                 </span>
@@ -212,6 +229,7 @@ function StageCard({
               onChange={(e) => setOffset(e.target.value)}
               aria-label="Due this many days after entering the stage"
             />
+            <StatusSetting value={setsStatus || null} onChange={(v) => setSetsStatus(v ?? "")} boxed />
             <Button disabled={!title.trim()}>Add task</Button>
           </form>
 
@@ -227,5 +245,24 @@ function StageCard({
         </div>
       )}
     </div>
+  );
+}
+
+/** "When ticked, set the project's status to…" for one checklist item. */
+function StatusSetting({ value, onChange, boxed }: { value: WorkStatus | null; onChange: (v: WorkStatus | null) => void; boxed?: boolean }) {
+  return (
+    <select
+      className={boxed ? "input w-auto" : "rounded-md border border-transparent bg-transparent py-0.5 pr-6 text-xs hover:border-slate-200"}
+      style={value ? { color: statusOf(value).color } : undefined}
+      value={value ?? ""}
+      onChange={(e) => onChange((e.target.value || null) as WorkStatus | null)}
+      aria-label="When ticked off, set the project status to"
+      title="When ticked off, set the project status to"
+    >
+      <option value="">{boxed ? "Status unchanged" : "No status change"}</option>
+      {PICKABLE_STATUSES.map((s) => (
+        <option key={s.value} value={s.value}>Sets {s.label}</option>
+      ))}
+    </select>
   );
 }

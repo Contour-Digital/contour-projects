@@ -14,6 +14,7 @@ import { dueLabel, formatDate, formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { TagBadge } from "@/components/support/TagBadge";
+import { StatusBadge, StatusPicker } from "@/components/ui/StatusPicker";
 import { ClientCard } from "@/components/clients/ClientCard";
 
 async function loadTask(id: string) {
@@ -92,6 +93,11 @@ export default function SupportTaskPage() {
           <h1 className={clsx("text-2xl font-semibold tracking-tight", task.done && "text-slate-400 line-through")}>{task.title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500">
             <TagBadge tag={task.tag} />
+            {task.done ? (
+              <StatusBadge status={task.status} />
+            ) : (
+              <StatusPicker status={task.status} label="Task status" onChange={(status) => updateTask({ status })} />
+            )}
             {task.done ? (
               <span>
                 Done {task.done_at ? formatDate(task.done_at.slice(0, 10)) : ""}

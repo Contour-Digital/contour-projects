@@ -6,10 +6,12 @@ import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { must, useData } from "@/lib/useData";
-import type { Client, Project, Stage, Task } from "@/lib/types";
+import type { Client, Project, Stage, Task, WorkStatus } from "@/lib/types";
 import { daysSince, dueLabel, formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { NewProjectModal } from "@/components/projects/NewProjectModal";
+import { StatusPicker } from "@/components/ui/StatusPicker";
+import { STATUSES } from "@/lib/status";
 
 type ListProject = Project & { client: Pick<Client, "id" | "name" | "company"> | null };
 // Cards lead with the business; the project name is only a fallback for clients without one.
@@ -45,6 +47,7 @@ export default function CurrentProjectsPage() {
   const { data, setData, reload, loading, error } = useData(loadProjects);
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<WorkStatus | "">("");
   const [creating, setCreating] = useState(false);
   const [hideClosed, setHideClosed] = useState(false);
 
@@ -68,6 +71,7 @@ export default function CurrentProjectsPage() {
         const stage = data.stages.find((s) => s.id === p.stage_id);
         if (hideClosed && stage?.is_closed) return false;
         if (stageFilter && p.stage_id !== stageFilter) return false;
+        if (statusFilter && p.status !== statusFilter) return false;
         return (
           !q ||
           p.name.toLowerCase().includes(q) ||
@@ -76,7 +80,7 @@ export default function CurrentProjectsPage() {
         );
       })
       .sort((a, b) => (stageOrder.get(a.stage_id) ?? 0) - (stageOrder.get(b.stage_id) ?? 0) || a.position - b.position);
-  }, [data, search, stageFilter, hideClosed]);
+  }, [data, search, stageFilter, statusFilter, hideClosed]);
 
   // One group per stage heading, kept even when empty so the whole pipeline stays visible.
   // Only the stage filter and "Hide completed" remove a heading.
@@ -110,6 +114,14 @@ export default function CurrentProjectsPage() {
     reload();
   }
 
+  async function changeStatus(projectId: string, status: WorkStatus) {
+    if (!data) return;
+    setData({ ...data, projects: data.projects.map((p) => (p.id === projectId ? { ...p, status } : p)) });
+    const { error } = await createClient().from("projects").update({ status }).eq("id", projectId);
+    if (error) alert(error.message);
+    reload();
+  }
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -125,6 +137,12 @@ export default function CurrentProjectsPage() {
             <option value="">All stages</option>
             {data.stages.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+          <select className="input w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as WorkStatus | "")} aria-label="Filter by status">
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
           <label className="flex items-center gap-1.5 text-sm text-slate-600">
@@ -146,9 +164,10 @@ export default function CurrentProjectsPage() {
               <span className="font-normal text-slate-400">{projects.length}</span>
             </summary>
             {projects.length > 0 && (
-              <div className="hidden grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_7rem_6rem_4rem] gap-4 border-y border-slate-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-500 md:grid">
+              <div className="hidden grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_9.5rem_minmax(0,1fr)_7rem_6rem_4rem] gap-4 border-y border-slate-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-500 md:grid">
                 <span>Business</span>
                 <span>Stage</span>
+                <span>Status</span>
                 <span>Stage tasks</span>
                 <span>Due</span>
                 <span className="text-right">Value</span>
@@ -168,7 +187,7 @@ export default function CurrentProjectsPage() {
                 return (
                   <li
                     key={p.id}
-                    className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 hover:bg-slate-50 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_7rem_6rem_4rem]"
+                    className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 hover:bg-slate-50 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_9.5rem_minmax(0,1fr)_7rem_6rem_4rem]"
                     onClick={() => router.push(`/projects/${p.id}`)}
                   >
                     <div className="min-w-0">
@@ -190,6 +209,10 @@ export default function CurrentProjectsPage() {
                           <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
                       </select>
+                    </div>
+
+                    <div className="col-span-2 md:col-span-1">
+                      <StatusPicker status={p.status} label={`Status for ${projectTitle(p)}`} onChange={(status) => changeStatus(p.id, status)} />
                     </div>
 
                     <div className="col-span-2 md:col-span-1">
