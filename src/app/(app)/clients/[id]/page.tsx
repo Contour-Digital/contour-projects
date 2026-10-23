@@ -11,6 +11,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { StageBadge } from "@/components/ui/StageBadge";
 import { TagBadge } from "@/components/support/TagBadge";
+import { StatusBadge } from "@/components/ui/StatusPicker";
 import { ClientCard } from "@/components/clients/ClientCard";
 import { ClientForm } from "@/components/clients/ClientForm";
 import { OffboardModal } from "@/components/clients/OffboardModal";
@@ -132,6 +133,7 @@ export default function ClientPage() {
                     </span>
                     <span className="flex items-center gap-3 text-sm text-slate-500">
                       {formatMoney(p.value)}
+                      <StatusBadge status={p.status} />
                       <StageBadge stage={data.stages.find((s) => s.id === p.stage_id)} />
                     </span>
                   </Link>

@@ -15,6 +15,7 @@ import { byClientName } from "@/lib/clients";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { TagBadge } from "@/components/support/TagBadge";
+import { StatusPicker } from "@/components/ui/StatusPicker";
 import { NewSupportTaskModal } from "@/components/support/NewSupportTaskModal";
 
 type ClientRow = Pick<Client, "id" | "name" | "company" | "offboarded_at">;
@@ -158,8 +159,16 @@ export default function SupportPage() {
                             .filter(Boolean)
                             .join(" · ")}
                         </div>
-                        <div className="mt-1 sm:hidden"><TagBadge tag={t.tag} /></div>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:hidden">
+                          <TagBadge tag={t.tag} />
+                          {!showDone && <StatusPicker status={t.status} label={`Status for ${t.title}`} onChange={(status) => update(t, { status })} />}
+                        </div>
                       </div>
+                      {!showDone && (
+                        <span className="hidden sm:block">
+                          <StatusPicker status={t.status} label={`Status for ${t.title}`} onChange={(status) => update(t, { status })} />
+                        </span>
+                      )}
                       <span className="hidden sm:block"><TagBadge tag={t.tag} /></span>
                       <span className="w-16 text-right text-xs text-slate-600">{t.price != null && formatMoney(Number(t.price))}</span>
                       {showDone && (

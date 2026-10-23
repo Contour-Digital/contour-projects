@@ -13,6 +13,7 @@ import { daysSince, dueLabel, formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { StageBadge } from "@/components/ui/StageBadge";
+import { StatusPicker } from "@/components/ui/StatusPicker";
 import { ClientCard } from "@/components/clients/ClientCard";
 
 async function loadProject(id: string) {
@@ -124,6 +125,7 @@ export default function ProjectPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500">
             <StageBadge stage={stage} />
+            <StatusPicker status={project.status} label="Project status" onChange={(status) => updateProject({ status })} />
             <span>{daysSince(project.stage_entered_at)} days in stage</span>
             {client && (
               <>
